@@ -1,6 +1,6 @@
 # Live Explain: planning proposal
 
-Status: proposed architecture, not an implemented API. This document specifies behavior before implementation. No dependencies have been installed and no performance or rendering claims have been tested. Public repository creation and planning documentation are authorized; implementation requires a subsequent approval.
+Status: approved design baseline. The first desktop vertical slice is now implemented; see README.md and VALIDATION.md for actual capabilities and evidence. The illustrative API and later milestones below remain proposals, not claims that every planned feature exists.
 
 ## A. System and non-goals
 

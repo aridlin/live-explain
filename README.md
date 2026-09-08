@@ -1,14 +1,112 @@
 # Live Explain
 
-A planned Python-based instrument for live technical explanation: three authored canonical narratives, controllable animated diagrams, meaningful explanatory detours, synchronized private scripts, and an eventual native Android controller.
+A Python instrument for live technical explanation: three authored canonical narratives, controllable diagrams, explanatory detours, and a synchronized private script.
 
-**Status: planning only.** There is no application, install command, renderer benchmark, or executable test suite yet. Implementation awaits approval of the design. The public repository currently records the design and the acceptance tests to implement; it does not claim those tests pass.
+**Status: working desktop vertical slice, not the complete 20-minute presentation.** The fullscreen audience application has been launched and inspected on Hyprland. The native Android application and network listener are later milestones; the transport-independent command boundary already has duplicate/retry/stale-state tests.
 
-- [Planning document: architecture, proposed authoring API, and milestones](PLAN.md)
-- [Test and acceptance specification](TEST_PLAN.md)
+![Cache timing specimen](tests/golden/normal-mid.png)
 
-The first presentation is a roughly 20-minute Polish explanation of Spectre and Meltdown. The engine is intended for extensive reuse beyond that subject.
+## Run
 
-Initial target: a Linux/Hyprland laptop with an ordinary fullscreen audience window on an HDMI projector and a separate private presenter window; Android only for the mobile milestone. Recommended foundation: PySide6 with Graphics View, subject to a representative feasibility prototype. Qt Quick is the fallback if measured rendering requirements justify it.
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). The lockfile pins the tested Python dependencies. No system Python modification is required.
 
-Public content deliberately excludes local diagnostics, device identifiers, personal context, pairing credentials, and session recordings. Future executable tests belong with the implementation and must cover navigation, models, animation, geometry, protocol, and visual regression. See the test specification for acceptance gates.
+```sh
+uv sync --frozen
+./run
+```
+
+The audience opens fullscreen. HDMI is preferred when Qt exposes an HDMI-named screen; select another output with `--screen N` (zero-based). Private notes are hidden until explicitly opened. On a single monitor, `P` opens the private presenter window for rehearsal; do not use that on a mirrored public desktop.
+
+```sh
+./run --windowed --presenter
+./run --canonical deep
+./run --screen 1
+```
+
+After installation, `./run` uses the installed environment directly and works offline. Bundled DejaVu fonts are checked against a hash manifest and for Polish/technical glyph coverage before audience output opens.
+
+| Key | Action |
+|---|---|
+| Right | Start next step; at the final hold, enter the next beat |
+| Space | Play/pause; also pauses a composition transition |
+| Down | Complete one semantic step while paused |
+| F | Finish the current sequence segment or composition transition |
+| R | Return to the current segment's starting hold |
+| Backspace | Resume the interrupted explanation, paused |
+| U | Undo the last narrative navigation |
+| P | Show/hide the private presenter window |
+| B | Freeze and cover/uncover the audience output |
+| F11 | Toggle fullscreen |
+| Escape | Leave fullscreen |
+
+The presenter window offers the Polish cue and full wording, current objective, return context, detour selector, three canonical continuations, prerequisite-bridge notice, playback scrubber, elapsed talk time, and output selection.
+
+## Try the defining interactions
+
+1. Start Normal and press Right. Pause halfway through the moving address.
+2. Open the presenter with P; choose **Gdzie jest cache? → Wyjaśnij**.
+3. Step through the cache-location explanation, then press Backspace. The original model, source focus, connector geometry, token position, and pending playback target return exactly, paused.
+4. Repeat the detour, select **Szczegółowa**, then **Przejdź do tej kontynuacji**. Missing prerequisites enter the authored timing/cache-line bridge. Complete it and press Right to enter Deep's own initial state.
+5. Continue the Normal branch example to see predicted work, a concealed value travelling to the cache trace, and the rejected architectural result. The visual conditional is separate from narrative detours.
+
+Two nested detours are supported; a third is rejected. Repeated Advance during an active segment does not queue another step. Exposure markers do not indicate comprehension. Timing values are illustrative; no exploit or host-memory access runs.
+
+## Tests and authoring
+
+```sh
+uv run pytest -q
+uv run ruff check src tests
+uv run ruff format --check src tests
+uv build --offline
+```
+
+Tests cover navigation/bridges, interrupted restoration, replay, event boundaries, invalid content, disclosure, command receipts, geometry during move/resize, real viewport rendering, and reviewed visual baselines. Three reference PNGs use pinned fonts and a small pixel-difference tolerance; geometric assertions are strict. HDMI hotplug and back-row legibility still require projector rehearsal.
+
+The implementation uses ordinary Python records and functions:
+
+- `authoring.py`: Beat, Script, Event, Landing, Presentation and reference validation.
+- `runtime.py`: authoritative session, deterministic event reconstruction, bounded detour/undo history, safe recovery and rehearsal journal.
+- `geometry.py`, `components.py`, `visual.py`: reusable geometry, Qt components and centrally clocked transitions.
+- `presentations/spectre.py`: authored routes and educational model, isolated from generic runtime code.
+- `presentations/spectre_scene.py`: the initial art-directed composition.
+- `protocol.py`: authorized command acceptance, receipts, epoch and revision checks. **No listening socket yet.**
+
+The larger API in [PLAN.md](PLAN.md) remains a proposal. These implemented modules are the current authoring interface; do not copy the proposed example and expect it to run unchanged.
+
+## Capture, rehearsal and recovery
+
+```sh
+./run --capture artifacts/normal.png --position 1.68
+./run --capture artifacts/cache.png --beat shared.location --position 3
+./run --debug --windowed --presenter
+./run --record artifacts/rehearsal.session.json
+./run --replay-file artifacts/rehearsal.session.json
+./run --recover
+./run --export artifacts/fallback --canonical normal
+```
+
+Capture/export uses the same scene renderer, offline. Export places audience stills in `public/` and notes in a separately named **PRIVATE-presenter-script.txt**. A conventional image viewer can show the stills if the app fails; this is a degraded fallback without live interaction.
+
+Recovery saves an atomic JSON safe canonical entry under the user's local state directory. It intentionally restarts paused with a new controller epoch; it is not a claim of exact crash recovery halfway through every animation. Rehearsal traces are content-version checked and reconstruct the recorded result without replaying network timing or obsolete phone taps.
+
+## Performance and limits
+
+```sh
+uv run python -m live_explain.benchmark --live --slice --frames 180
+uv run python -m live_explain.benchmark --live --frames 240
+./run --benchmark 120
+```
+
+`--live` briefly opens two real windows and reports paint cost and callback intervals. Without it, the benchmark measures offscreen throughput, not display FPS. The dense fixture includes 30 code lines, 128 bytes, 24 components, 40 connectors and 24 tokens.
+
+On the initial target run, the authored slice's two-window paint cost was approximately 9 ms median / 15 ms p95. Callback intervals were approximately 16 ms median / 24 ms p95, so the provisional 20 ms p95 interval gate is **not fully met**. These do not measure compositor presentation or photon latency. The dense stress fixture remains substantially over budget even after caching; no universal 60 FPS claim is made. See [VALIDATION.md](VALIDATION.md).
+
+The next work is additional performance headroom, fuller component ergonomics, the complete roughly 20-minute Polish talk, and later a native Kotlin/Compose Android controller. Large-model virtualization, a graphical editor, universal routing, and a full CPU simulator remain deferred. Qt Quick remains a measured fallback for larger workloads.
+
+## Design and licenses
+
+- [Full A–M design and milestones](PLAN.md)
+- [Long-term test specification](TEST_PLAN.md)
+- [Current validation and remaining gates](VALIDATION.md)
+
+Original code is MIT licensed. Bundled fonts retain their own license in `src/live_explain/assets/fonts/LICENSE.txt`. Qt/PySide and Pygments retain their dependency licenses; the project's MIT license does not relicense them. Local recordings, recovery data, desktop screenshots and diagnostics are excluded from Git.

@@ -1,6 +1,6 @@
 # Test and acceptance specification
 
-Status: planned tests; none are executable or claimed passing yet. Implementation is deliberately paused pending design approval. This specification is the initial test artifact for the requested public repository. Runnable tests will accompany the first implementation, not be replaced by documentation.
+Status: long-term acceptance specification. Runnable tests now exist under tests/ for the first desktop slice. See VALIDATION.md for verified behavior and remaining gates; this document does not claim every future case is implemented or passing.
 
 ## Pure navigation and coverage
 
