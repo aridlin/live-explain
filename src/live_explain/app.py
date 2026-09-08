@@ -138,6 +138,9 @@ class Presenter(QMainWindow):
         blank = QPushButton("Zasłoń / pokaż  B")
         blank.clicked.connect(lambda: send("blank"))
         output_row.addWidget(blank)
+        pair = QPushButton("Połącz telefon")
+        pair.clicked.connect(lambda: send("pair"))
+        output_row.addWidget(pair)
         layout.addLayout(output_row)
         self.status = QLabel()
         self.status.setWordWrap(True)
@@ -225,6 +228,8 @@ class Instrument:
         self.scene = SpectreScene(self.session)
         self.audience = Audience(self.scene)
         self.presenter = Presenter(self.session, self.send, self.audience)
+        self.remote = None
+        self.pair_dialog = None
         self.recovery = Path.home() / ".local/state/live-explain/recovery.json"
         if args.beat:
             if args.beat not in self.session.presentation.routes[args.canonical]:
@@ -284,28 +289,55 @@ class Instrument:
         self.scene.transition = None
         self.scene.blank = True
         self.presenter.hide()
+        if self.pair_dialog:
+            self.pair_dialog.hide()
         self.presenter.refresh_screens()
         self.scene.refresh()
-        self.session.status = "Wyjście zmieniło się. P otwiera prywatny pulpit do ponownego wyboru ekranu."
+        self.session.status = "Wyjście zmieniło się. Wybierz ekran w telefonie albo w prywatnym pulpicie (P)."
+
+    def remote_state(self):
+        state = self.session.controller_state()
+        transition = self.scene.transition
+        state.update(
+            blank=self.scene.blank,
+            transitioning=bool(transition and transition.active),
+            transition_paused=bool(transition and transition.paused),
+            outputs=[dict(id=str(i), title=screen.name()) for i, screen in enumerate(self.app.screens())],
+        )
+        return state
 
     def send(self, kind, value=None):
+        if kind == "pair":
+            from .remote import RemoteServer
+
+            try:
+                if self.remote is None:
+                    self.remote = RemoteServer(self)
+                    self.app.aboutToQuit.connect(self.remote.close)
+                self.pair_dialog = self.remote.pairing_dialog(self.presenter)
+            except OSError as error:
+                self.session.status = f"Nie udało się uruchomić połączenia: {error}"
+            return True, self.session.status
+        accepted, message = True, "Gotowe."
         transition = self.scene.transition
         if transition and transition.active:
             if kind in {"pause", "freeze", "toggle"}:
                 transition.paused = not transition.paused if kind == "toggle" else True
                 self.session.command("freeze")
-                return
+                return True, "Wstrzymano zmianę kompozycji."
             if kind == "play":
                 transition.paused = False
-                return
+                self.session._changed()
+                return True, "Wznowiono zmianę kompozycji."
             if kind == "finish":
                 transition.finish()
                 self.scene.update()
-                return
-            if kind not in {"undo", "blank", "presenter", "windowed", "fullscreen"}:
+                self.session._changed()
+                return True, "Zakończono zmianę kompozycji."
+            if kind not in {"undo", "blank", "output", "presenter", "windowed", "fullscreen"}:
                 self.session.status = "Trwa zmiana kompozycji. Pauza zatrzymuje; F kończy."
                 self.presenter.refresh()
-                return
+                return False, self.session.status
         old_beat = self.session.beat.id
         previous_frame = (
             capture(self.scene, None) if kind in {"advance", "detour", "depth", "return", "undo"} else None
@@ -313,8 +345,23 @@ class Instrument:
         if kind == "toggle":
             kind = "pause" if self.session.state.playback.playing else "play"
         if kind == "blank":
+            if value not in (None, "on", "off"):
+                return False, "Nieznany stan zasłony."
             self.session.command("freeze")
-            self.scene.blank = not self.scene.blank
+            self.scene.blank = value == "on" if value is not None else not self.scene.blank
+            if self.scene.transition:
+                self.scene.transition.paused = True
+        elif kind == "output":
+            screens = self.app.screens()
+            if not isinstance(value, str) or not value.isdigit() or int(value) >= len(screens):
+                return False, "Wyjście niedostępne."
+            self.session.command("freeze")
+            self.presenter.hide()
+            self.audience.hide()
+            self.audience.windowHandle().setScreen(screens[int(value)])
+            self.audience.setGeometry(screens[int(value)].geometry())
+            self.audience.showFullScreen()
+            self.scene.blank = True
             if self.scene.transition:
                 self.scene.transition.paused = True
         elif kind == "presenter":
@@ -329,15 +376,18 @@ class Instrument:
         elif kind == "windowed":
             self.audience.showNormal()
         else:
-            self.session.command(kind, value)
+            accepted, message = self.session.command(kind, value)
         self.scene.refresh()
         if self.session.beat.id != old_beat and previous_frame is not None:
             self.scene.previous_frame = previous_frame
             self.scene.transition = Transition()
         self.presenter.refresh()
         self.session.save(self.recovery)
+        return accepted, message
 
     def tick(self):
+        if self.remote and self.remote.host.controller and self.pair_dialog:
+            self.pair_dialog.hide()
         now = time.monotonic()
         delta = now - self.previous
         self.previous = now
@@ -347,6 +397,7 @@ class Instrument:
             self.scene.transition.tick(delta)
             if not self.scene.transition.active:
                 self.scene.previous_frame = None
+                self.session._changed()
             self.scene.update()
         if was:
             self.scene.refresh()
@@ -366,6 +417,7 @@ def capture(scene, path, width=1600, height=900):
 
 def main():
     parser = argparse.ArgumentParser(description="Live Explain — live presentation instrument")
+    parser.add_argument("--remote", action="store_true", help="Open private phone pairing before the talk")
     parser.add_argument("--windowed", action="store_true")
     parser.add_argument(
         "--presenter", action="store_true", help="Show private notes (rehearsal only on a single screen)"
@@ -481,6 +533,8 @@ def main():
     instrument.presenter.windowHandle().setScreen(laptop)
     if args.presenter:
         instrument.presenter.show()
+    if args.remote:
+        instrument.send("pair")
     return app.exec()
 
 

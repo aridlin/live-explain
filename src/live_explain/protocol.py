@@ -1,4 +1,4 @@
-"""Transport-independent controller boundary; no network listener in this milestone."""
+"""Authenticated commands with revision checks and session-lifetime retry receipts."""
 
 from copy import deepcopy
 import hmac
@@ -19,15 +19,19 @@ class CommandHost:
         "undo",
         "detour",
         "depth",
+        "blank",
+        "output",
     }
 
-    def __init__(self, session):
+    def __init__(self, session, dispatch=None, state=None):
         self.session = session
+        self.dispatch = dispatch or session.command
+        self.state = state or session.controller_state
         self.token = secrets.token_urlsafe(32)
         self.receipts = {}
         self.controller = None
 
-    def handle(self, raw, token, controller="phone"):
+    def handle(self, raw, token, controller="phone", resolve=False):
         if not isinstance(token, str) or not hmac.compare_digest(token, self.token):
             return {"status": "unauthorized"}
         if self.controller not in (None, controller):
@@ -50,7 +54,7 @@ class CommandHost:
         except (ValueError, TypeError):
             return {"status": "invalid"}
         if value["epoch"] != self.session.epoch:
-            return {"status": "wrong_epoch", "state": self.session.controller_state()}
+            return {"status": "wrong_epoch", "state": self.state()}
         self.controller = controller
         key = (self.session.epoch, controller, value["id"])
         if key in self.receipts:
@@ -58,17 +62,26 @@ class CommandHost:
             if value != original:
                 return {"status": "id_conflict"}
             return deepcopy(receipt)
-        accepted, message = self.session.command(value["kind"], value["value"], value["revision"])
+        if resolve:
+            accepted, message = False, "Polecenie nie dotarło; anulowano spóźnione wykonanie."
+        elif value["revision"] != self.session.revision:
+            accepted, message = False, "Nieaktualny stan sterowania."
+        elif len(self.receipts) >= 20000:
+            accepted, message = False, "Limit poleceń sesji."
+        else:
+            accepted, message = self.dispatch(value["kind"], value["value"])
+
         receipt = dict(
             status="accepted" if accepted else "rejected",
             id=value["id"],
             message=message,
-            state=self.session.controller_state(),
+            state=self.state(),
         )
-        self.receipts[key] = (deepcopy(receipt), value)
+        if len(self.receipts) < 20000:
+            self.receipts[key] = (deepcopy(receipt), value)
         return receipt
 
     def synchronize(self, token):
         if not isinstance(token, str) or not hmac.compare_digest(token, self.token):
             raise PermissionError("Unauthorized")
-        return self.session.controller_state()
+        return self.state()

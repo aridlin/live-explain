@@ -101,6 +101,18 @@ class SpectreScene(QGraphicsScene):
         self.token.setVisible(not location and not recap and 0 < p < 4)
         self.value_token.setVisible(branch and 4 < p < 6)
         self.value_link.setVisible(branch and p >= 4)
+        # Reveals use the sequence clock, so seeking and exact returns reproduce them.
+        for connector, start in (
+            (self.link1, 0),
+            (self.link2, 0.25),
+            (self.ram_link, 0),
+            (self.path_yes, 0),
+            (self.path_no, 0.25),
+            (self.value_link, 4),
+        ):
+            connector.setOpacity(smooth((p - start) / 0.65))
+        self.token.setOpacity(smooth(p / 0.45))
+        self.value_token.setOpacity(smooth((p - 4) / 0.45))
         code, register, memory = transfer_layout(p if p < 2 else 2)
         if branch:
             code = Box(code.x, code.y, code.w, 294)
@@ -146,7 +158,7 @@ class SpectreScene(QGraphicsScene):
             )
             self.link2.set_route(route2)
             active = Route("whole-transfer", route.points + route2.points)
-            point = active.at(p / 4)
+            point = active.at(smooth(p / 4))
             self.token.setPos(point.x, point.y)
             self.token.label = str(model["index"])
         self.cache.title = "ŚLAD W CACHE" if branch else "PAMIĘĆ PODRĘCZNA"
@@ -210,7 +222,7 @@ class SpectreScene(QGraphicsScene):
             self.value_link.set_route(value_route)
             self.value_link.color = TEAL
             self.value_token.label = "··" if model["probe"] is None else str(model["probe"])
-            point = value_route.at((p - 4) / 2)
+            point = value_route.at(smooth((p - 4) / 2))
             self.value_token.setPos(point.x, point.y)
             self.decision.place(Box(820, 465, 210, 108))
             self.decision.body = "12 < 8 ?"

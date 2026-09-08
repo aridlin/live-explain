@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from math import hypot
+from functools import cached_property
 
 
 @dataclass(frozen=True)
@@ -45,13 +46,35 @@ class Route:
     id: str
     points: tuple[Point, ...]
 
-    @property
+    @cached_property
+    def samples(self):
+        """Rounded authored corners; one shared path for drawing and token travel.
+
+        Short legs limit the radius. Endpoints and their outward directions stay fixed.
+        """
+        result = [self.points[0]]
+        for a, corner, b in zip(self.points, self.points[1:], self.points[2:]):
+            incoming = hypot(corner.x - a.x, corner.y - a.y)
+            outgoing = hypot(b.x - corner.x, b.y - corner.y)
+            if not incoming or not outgoing:
+                result.append(corner)
+                continue
+            radius = min(16, incoming / 3, outgoing / 3)
+            start, end = corner.mix(a, radius / incoming), corner.mix(b, radius / outgoing)
+            result.append(start)
+            for step in range(1, 13):
+                t = step / 12
+                result.append(start.mix(corner, t).mix(corner.mix(end, t), t))
+        result.append(self.points[-1])
+        return tuple(result)
+
+    @cached_property
     def length(self):
-        return sum(hypot(b.x - a.x, b.y - a.y) for a, b in zip(self.points, self.points[1:]))
+        return sum(hypot(b.x - a.x, b.y - a.y) for a, b in zip(self.samples, self.samples[1:]))
 
     def at(self, u):
         remaining = max(0, min(1, u)) * self.length
-        for a, b in zip(self.points, self.points[1:]):
+        for a, b in zip(self.samples, self.samples[1:]):
             length = hypot(b.x - a.x, b.y - a.y)
             if length and remaining <= length:
                 return a.mix(b, remaining / length)

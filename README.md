@@ -2,7 +2,7 @@
 
 A Python instrument for live technical explanation: three authored canonical narratives, controllable diagrams, explanatory detours, and a synchronized private script.
 
-**Status: working desktop vertical slice, not the complete 20-minute presentation.** The fullscreen audience application has been launched and inspected on Hyprland. The native Android application and network listener are later milestones; the transport-independent command boundary already has duplicate/retry/stale-state tests.
+**Status: working desktop vertical slice, not the complete 20-minute presentation.** The fullscreen audience application has been launched and inspected on Hyprland. A native Android script reader and remote now connects locally through the phone hotspot, with private QR pairing and encrypted transport. See [Android setup](android/README.md).
 
 ![Cache timing specimen](tests/golden/normal-mid.png)
 
@@ -21,6 +21,7 @@ The audience opens fullscreen. HDMI is preferred when Qt exposes an HDMI-named s
 ./run --windowed --presenter
 ./run --canonical deep
 ./run --screen 1
+./run --remote  # private phone pairing before the talk
 ```
 
 After installation, `./run` uses the installed environment directly and works offline. Bundled DejaVu fonts are checked against a hash manifest and for Polish/technical glyph coverage before audience output opens.
@@ -69,7 +70,8 @@ The implementation uses ordinary Python records and functions:
 - `geometry.py`, `components.py`, `visual.py`: reusable geometry, Qt components and centrally clocked transitions.
 - `presentations/spectre.py`: authored routes and educational model, isolated from generic runtime code.
 - `presentations/spectre_scene.py`: the initial art-directed composition.
-- `protocol.py`: authorized command acceptance, receipts, epoch and revision checks. **No listening socket yet.**
+- `protocol.py`, `remote.py`: authorized command acceptance, cancellation receipts, epoch/revision checks and local HTTPS pairing.
+- `android/`: native script reader and expandable remote control tray.
 
 The larger API in [PLAN.md](PLAN.md) remains a proposal. These implemented modules are the current authoring interface; do not copy the proposed example and expect it to run unchanged.
 
@@ -101,7 +103,7 @@ uv run python -m live_explain.benchmark --live --frames 240
 
 On the initial target run, the authored slice's two-window paint cost was approximately 9 ms median / 15 ms p95. Callback intervals were approximately 16 ms median / 24 ms p95, so the provisional 20 ms p95 interval gate is **not fully met**. These do not measure compositor presentation or photon latency. The dense stress fixture remains substantially over budget even after caching; no universal 60 FPS claim is made. See [VALIDATION.md](VALIDATION.md).
 
-The next work is additional performance headroom, fuller component ergonomics, the complete roughly 20-minute Polish talk, and later a native Kotlin/Compose Android controller. Large-model virtualization, a graphical editor, universal routing, and a full CPU simulator remain deferred. Qt Quick remains a measured fallback for larger workloads.
+The next work is additional performance headroom, fuller component ergonomics, the complete roughly 20-minute Polish talk, and physical phone/hotspot rehearsal for the native Android controller. Large-model virtualization, a graphical editor, universal routing, and a full CPU simulator remain deferred. Qt Quick remains a measured fallback for larger workloads.
 
 ## Design and licenses
 

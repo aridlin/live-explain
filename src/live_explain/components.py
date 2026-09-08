@@ -264,7 +264,7 @@ class Connector(QGraphicsObject):
             pen.setStyle(Qt.PenStyle.DashLine)
         p.setPen(pen)
         path = QPainterPath(QPointF(self.route.points[0].x, self.route.points[0].y))
-        for point in self.route.points[1:]:
+        for point in self.route.samples[1:]:
             path.lineTo(point.x, point.y)
         p.drawPath(path)
         end, previous = self.route.points[-1], self.route.points[-2]

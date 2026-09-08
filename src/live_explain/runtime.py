@@ -237,7 +237,15 @@ class Session:
         self.state.return_sentence = "Teraz spójrzmy na ten sam mechanizm z nowej perspektywy."
 
     def controller_state(self):
+        at_end = self.state.playback.position >= self.beat.holds[-1]
+        returning = at_end and self.state.detours and not self.state.narrative.bridge_target
         return dict(
+            next_kind="return" if returning else "advance",
+            next_label="Wróć do wyjaśnienia"
+            if returning
+            else "Następny punkt"
+            if at_end
+            else "Dalej — animacja",
             epoch=self.epoch,
             revision=self.revision,
             canonical=self.state.narrative.canonical,
@@ -245,6 +253,31 @@ class Session:
             position=self.state.playback.position,
             playing=self.state.playback.playing,
             cue=self.beat.script.cue,
+            title=self.beat.title,
+            script=asdict(self.beat.script),
+            elapsed=self.elapsed,
+            duration=self.beat.holds[-1],
+            return_sentence=self.state.return_sentence,
+            bridge_target=self.state.narrative.bridge_target,
+            can_undo=bool(self.history),
+            status=self.status,
+            routes=[
+                dict(
+                    id=key,
+                    title=title,
+                    missing=sorted(self.landing_gaps(key)),
+                    destination=self.presentation.landings[key].beat,
+                )
+                for key, title in (
+                    ("simple", "Super prosta"),
+                    ("normal", "Normalna"),
+                    ("deep", "Szczegółowa"),
+                )
+            ],
+            branches=[
+                dict(id=key, title=self.presentation.beats[self.presentation.detours[key]].title)
+                for key in self.beat.detours
+            ],
             detours=self.beat.detours,
             return_to=self.state.detours[-1].narrative.beat if self.state.detours else None,
         )
