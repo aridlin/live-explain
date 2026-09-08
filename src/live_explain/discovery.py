@@ -47,11 +47,13 @@ class Discovery:
         )
         if addresses == self.addresses:
             return
+        self.addresses = addresses
+        self.worker.submit(self.publish, addresses)
+
+    def publish(self, addresses):
         if self.info is not None:
             self.zeroconf.unregister_service(self.info)
             self.info = None
-        self.worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="live-discovery")
-        self.addresses = addresses
         if addresses:
             self.info = advertisement(self.epoch, self.pin, self.port, addresses)
             self.zeroconf.register_service(self.info)

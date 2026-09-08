@@ -120,8 +120,15 @@ class Session:
         self._changed()
         # Seeking is not evidence that the explanation was delivered.
 
+    def landing_for(self, canonical):
+        origin = self.state.detours[0].narrative.beat if self.state.detours else self.beat.id
+        if self.state.narrative.bridge_target and ":" in self.state.narrative.bridge_target:
+            origin = self.state.narrative.bridge_target.split(":", 1)[1]
+        checkpoint = self.presentation.beats[origin].checkpoint
+        return self.presentation.checkpoint_landings.get(checkpoint, self.presentation.landings)[canonical]
+
     def landing_gaps(self, canonical):
-        landing = self.presentation.landings[canonical]
+        landing = self.landing_for(canonical)
         return landing.requires - self.delivered
 
     def command(self, kind, value=None, expected_revision=None, record=True):
@@ -204,20 +211,22 @@ class Session:
             self.state.playback = frame.playback
             self.state.playback.playing = False
             self.state.cue_index = frame.cue_index
-            self.state.return_sentence = "Wróćmy dokładnie do miejsca, w którym przerwaliśmy."
+            self.state.return_sentence = self.beat.script.resume_sentence
             self._changed()
             return True, "Przywrócono dokładną pozycję; wstrzymane."
         if kind == "depth":
             if value not in self.presentation.landings:
                 return False, "Nieznana trasa."
-            landing = self.presentation.landings[value]
+            landing = self.landing_for(value)
             missing = self.landing_gaps(value)
             if missing and not landing.bridge:
                 return False, "Brak przygotowanego mostu: " + ", ".join(sorted(missing))
             self._remember()
             if missing:
                 self._entry(landing.bridge)
-                self.state.narrative.bridge_target = value
+                self.state.narrative.bridge_target = (
+                    value + ":" + landing.beat if self.presentation.checkpoint_landings else value
+                )
                 return True, "Najpierw most: " + ", ".join(sorted(missing))
             self._land(value)
             return True, "Nowa trasa; autorski stan wejściowy."
@@ -231,10 +240,14 @@ class Session:
         return False, "Nieznane polecenie."
 
     def _land(self, canonical):
-        self.state.narrative = Narrative(canonical, self.presentation.landings[canonical].beat)
+        if ":" in canonical:
+            canonical, destination = canonical.split(":", 1)
+        else:
+            destination = self.landing_for(canonical).beat
+        self.state.narrative = Narrative(canonical, destination)
         self.state.detours.clear()
         self._entry(self.state.narrative.beat)
-        self.state.return_sentence = "Teraz spójrzmy na ten sam mechanizm z nowej perspektywy."
+        self.state.return_sentence = self.beat.script.entry_sentence
 
     def controller_state(self):
         at_end = self.state.playback.position >= self.beat.holds[-1]
@@ -254,7 +267,27 @@ class Session:
             playing=self.state.playback.playing,
             cue=self.beat.script.cue,
             title=self.beat.title,
-            script=asdict(self.beat.script),
+            script={
+                **asdict(self.beat.script),
+                "objective": self.beat.script.objective
+                + (
+                    "\nTERAZ: "
+                    + self.beat.stage_cues[
+                        max(
+                            i
+                            for i, hold in enumerate(self.beat.holds)
+                            if hold <= self.state.playback.position
+                        )
+                    ]
+                    if self.beat.stage_cues
+                    else ""
+                ),
+            },
+            planned_seconds=self.beat.planned_seconds,
+            route_seconds=sum(
+                self.presentation.beats[key].planned_seconds
+                for key in self.presentation.routes[self.state.narrative.canonical]
+            ),
             elapsed=self.elapsed,
             duration=self.beat.holds[-1],
             return_sentence=self.state.return_sentence,
@@ -266,7 +299,7 @@ class Session:
                     id=key,
                     title=title,
                     missing=sorted(self.landing_gaps(key)),
-                    destination=self.presentation.landings[key].beat,
+                    destination=self.landing_for(key).beat,
                 )
                 for key, title in (
                     ("simple", "Super prosta"),

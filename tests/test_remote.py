@@ -72,7 +72,14 @@ def test_fades_restore_at_interrupted_position(app, session):
 
 def test_remote_dispatch_controls_composition_and_blank(app, tmp_path):
     args = SimpleNamespace(
-        canonical="normal", beat=None, position=0, recover=False, debug=False, record=None, replay_file=None
+        slice=True,
+        canonical="normal",
+        beat=None,
+        position=0,
+        recover=False,
+        debug=False,
+        record=None,
+        replay_file=None,
     )
     instrument = Instrument(app, args)
     instrument.timer.stop()
@@ -167,3 +174,31 @@ def test_discovery_exposes_only_locator_and_public_pin():
     assert info.parsed_addresses() == ["192.168.1.4"]
     assert set(info.properties) == {b"pin", b"version"}
     assert b"token" not in info.properties
+
+
+def test_discovery_publication_and_shutdown_run_off_gui_thread(app, monkeypatch):
+    import live_explain.discovery as discovery
+
+    calls = []
+    main_thread = threading.get_ident()
+
+    class FakeZeroconf:
+        def __init__(self, **kwargs):
+            pass
+
+        def register_service(self, info):
+            calls.append(("register", threading.get_ident()))
+
+        def unregister_service(self, info):
+            calls.append(("unregister", threading.get_ident()))
+
+        def close(self):
+            calls.append(("close", threading.get_ident()))
+
+    monkeypatch.setattr(discovery, "Zeroconf", FakeZeroconf)
+    monkeypatch.setattr(discovery.QNetworkInterface, "allInterfaces", lambda: [])
+    instance = discovery.Discovery("session", "a" * 64, 8765)
+    instance.worker.submit(instance.publish, ("192.168.1.4",)).result(timeout=2)
+    instance.close()
+    assert [kind for kind, _ in calls] == ["register", "unregister", "close"]
+    assert all(thread != main_thread for kind, thread in calls if kind != "close")

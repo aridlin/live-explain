@@ -14,6 +14,8 @@ class Script:
     next_sentence: str
     boundary: str
     recap: str = ""
+    resume_sentence: str = "Wróćmy dokładnie do miejsca, w którym przerwaliśmy."
+    entry_sentence: str = "Teraz spójrzmy na ten sam mechanizm z nowej perspektywy."
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,9 @@ class Beat:
     code: tuple[str, ...] = ()
     spans: dict[str, tuple[int, str]] = field(default_factory=dict)
     seed: int = 17
+    planned_seconds: int = 60
+    stage_cues: tuple[str, ...] = ()
+    diagram: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -59,6 +64,7 @@ class Presentation:
     initial: Callable[[Beat], dict]
     reduce: Callable[[dict, Event], None]
     model_version: str = "1"
+    checkpoint_landings: dict[str, dict[str, Landing]] = field(default_factory=dict)
 
     def validate(self):
         if set(self.routes) != {"simple", "normal", "deep"}:
@@ -66,6 +72,8 @@ class Presentation:
         for key, beat in self.beats.items():
             if key != beat.id or not beat.holds or beat.holds[0] != 0:
                 raise ValueError(f"Invalid beat: {key}")
+            if beat.planned_seconds <= 0 or (beat.stage_cues and len(beat.stage_cues) != len(beat.holds)):
+                raise ValueError(f"Invalid presenter pacing: {key}")
             if tuple(sorted(set(beat.holds))) != beat.holds:
                 raise ValueError(f"Unordered holds: {key}")
             if any(e.at < 0 or e.at > beat.holds[-1] for e in beat.events):
@@ -100,7 +108,13 @@ class Presentation:
                     raise ValueError(f"Unestablished route prerequisite: {key}")
                 covered.update(beat.covers)
             reached.update(route)
-        for landing in self.landings.values():
+        for checkpoint, landings in self.checkpoint_landings.items():
+            if set(landings) != set(self.routes):
+                raise ValueError(f"Incomplete checkpoint correspondence: {checkpoint}")
+        all_landings = list(self.landings.values()) + [
+            landing for group in self.checkpoint_landings.values() for landing in group.values()
+        ]
+        for landing in all_landings:
             if landing.canonical not in self.routes or landing.beat not in self.routes[landing.canonical]:
                 raise ValueError("Landing must belong to canonical")
             if landing.bridge:
@@ -123,5 +137,9 @@ class Presentation:
             routes=self.routes,
             detours=self.detours,
             landings={k: asdict(v) for k, v in self.landings.items()},
+            checkpoint_landings={
+                key: {k: asdict(v) for k, v in group.items()}
+                for key, group in self.checkpoint_landings.items()
+            },
         )
         return sha256(json.dumps(value, sort_keys=True, default=lambda x: sorted(x)).encode()).hexdigest()

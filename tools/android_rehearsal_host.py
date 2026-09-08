@@ -19,7 +19,14 @@ load_fonts()
 instrument = Instrument(
     app,
     SimpleNamespace(
-        canonical="normal", beat=None, position=0, recover=False, debug=False, record=None, replay_file=None
+        slice=True,
+        canonical="normal",
+        beat=None,
+        position=0,
+        recover=False,
+        debug=False,
+        record=None,
+        replay_file=None,
     ),
 )
 instrument.recovery = args.pairing_file.with_suffix(".recovery.json")

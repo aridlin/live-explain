@@ -2,7 +2,7 @@
 
 A Python instrument for live technical explanation: three authored canonical narratives, controllable diagrams, explanatory detours, and a synchronized private script.
 
-**Status: working desktop vertical slice, not the complete 20-minute presentation.** The fullscreen audience application has been launched and inspected on Hyprland. A native Android script reader and remote now connects locally through the phone hotspot, with private QR pairing and encrypted transport. See [Android setup](android/README.md).
+**Status: complete authored Polish talk and native Android preview; physical room rehearsal remains required.** The fullscreen audience application has been launched and inspected on Hyprland. A native Android script reader and remote now connects locally through the phone hotspot, with private QR pairing and encrypted transport. See [Android setup](android/README.md).
 
 ![Cache timing specimen](tests/golden/normal-mid.png)
 
@@ -44,6 +44,8 @@ The presenter window offers the Polish cue and full wording, current objective, 
 
 ## Try the defining interactions
 
+Use `./run --slice` for the compact engineering rehearsal, or `./run --beat normal.timing` within the full talk. The default `./run` starts the complete narrative. See [the presentation and pacing guide](PRESENTATION.md).
+
 1. Start Normal and press Right. Pause halfway through the moving address.
 2. Open the presenter with P; choose **Gdzie jest cache? → Wyjaśnij**.
 3. Step through the cache-location explanation, then press Backspace. The original model, source focus, connector geometry, token position, and pending playback target return exactly, paused.
@@ -68,8 +70,9 @@ The implementation uses ordinary Python records and functions:
 - `authoring.py`: Beat, Script, Event, Landing, Presentation and reference validation.
 - `runtime.py`: authoritative session, deterministic event reconstruction, bounded detour/undo history, safe recovery and rehearsal journal.
 - `geometry.py`, `components.py`, `visual.py`: reusable geometry, Qt components and centrally clocked transitions.
-- `presentations/spectre.py`: authored routes and educational model, isolated from generic runtime code.
-- `presentations/spectre_scene.py`: the initial art-directed composition.
+- `presentations/talk.py`, `talk_text.py`: all three full Polish routes, checkpoint landings, bridges and speaking material.
+- `presentations/spectre.py`: retained compact engineering specimen and shared educational events.
+- `presentations/spectre_scene.py`, `talk_scene.py`: persistent code/hex diagrams and authored full-talk compositions.
 - `protocol.py`, `remote.py`: authorized command acceptance, cancellation receipts, epoch/revision checks and local HTTPS pairing.
 - `android/`: native script reader and expandable remote control tray.
 
@@ -78,7 +81,7 @@ The larger API in [PLAN.md](PLAN.md) remains a proposal. These implemented modul
 ## Capture, rehearsal and recovery
 
 ```sh
-./run --capture artifacts/normal.png --position 1.68
+./run --capture artifacts/normal.png --beat normal.timing --position 1.68
 ./run --capture artifacts/cache.png --beat shared.location --position 3
 ./run --debug --windowed --presenter
 ./run --record artifacts/rehearsal.session.json
@@ -103,7 +106,7 @@ uv run python -m live_explain.benchmark --live --frames 240
 
 On the initial target run, the authored slice's two-window paint cost was approximately 9 ms median / 15 ms p95. Callback intervals were approximately 16 ms median / 24 ms p95, so the provisional 20 ms p95 interval gate is **not fully met**. These do not measure compositor presentation or photon latency. The dense stress fixture remains substantially over budget even after caching; no universal 60 FPS claim is made. See [VALIDATION.md](VALIDATION.md).
 
-The next work is additional performance headroom, fuller component ergonomics, the complete roughly 20-minute Polish talk, and physical phone/hotspot rehearsal for the native Android controller. Large-model virtualization, a graphical editor, universal routing, and a full CPU simulator remain deferred. Qt Quick remains a measured fallback for larger workloads.
+The next gates are physical phone/hotspot and projector rehearsal, timing the complete talk aloud, additional performance headroom, and fuller component ergonomics. Large-model virtualization, a graphical editor, universal routing, and a full CPU simulator remain deferred. Qt Quick remains a measured fallback for larger workloads.
 
 ## Design and licenses
 

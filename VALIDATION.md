@@ -1,10 +1,10 @@
-# Validation: desktop slice and native Android preview
+# Validation: full authored talk and native Android preview
 
-This is a bounded implementation of the approved first milestone, not the entire long-term test specification or the finished 20-minute talk.
+The complete authored talk is implemented. This record separates software checks from the remaining physical-phone, projector and spoken-rehearsal gates. It does not claim every long-term engine feature is complete.
 
 ## Verified
 
-- 68 Python runtime/model/protocol and Qt integration tests passed locally, including real HTTPS transport and three reviewed visual baselines.
+- The full suite now includes 82 Python checks: all 48 canonical beats plus detours/bridges, Polish typography and rendering at every authored hold, audience disclosure, interrupted pixel restoration and matching-checkpoint depth changes, alongside the existing runtime, geometry and protocol tests.
 - Eight Android JVM tests passed. Android lint passed with warnings (pinned dependency versions, deliberately durable command receipts, custom session-certificate pinning, and Polish-only string composition).
 - A native Android API 35 emulator rehearsal passed: reader synchronization, advance and explicit segment completion, cache-location detour, exact paused return at position 2, and blank/unblank over TLS. Native DNS-SD discovery and matching-pin relocation compile and pass JVM checks; physical multicast discovery remains a room-device check. Reader and tray captures were inspected; timeline choices were compressed to one row so branches remain nearer the thumb.
 - Exact detour return reproduces the original captured pixels and preserves stable item identities.
@@ -37,10 +37,37 @@ Offscreen Normal scene rendering over 120 frames measured about 10.6 ms median /
 
 - HDMI projector mode changes, hotplug behavior, mixed-refresh outputs and actual room/back-row readability. HDMI was disconnected during the observed checks.
 - Zero-frame privacy during OS mirroring: no application can guarantee this. Notes remain opt-in; known screen changes hide private UI and cover the audience scene.
-- Full 20-minute rehearsal or all three full-length narratives. Current content is the compact proving sequence.
+- A timed, spoken 20-minute rehearsal. All three full-length narratives are authored; their planned 16:15 core leaves approximately 3:45 for detours and discussion. This is a budget, not a measured speaking duration.
 - Physical Android phone/hotspot compatibility, camera QR scanning on a real device, prolonged radio-loss rehearsal, and touch-to-projector latency. The native preview uses HTTPS polling rather than WebSockets; its emulator test does not prove vendor hotspot routing.
 - Large-dataset virtualization, a graphical authoring editor, rich arbitrary code editing, a general graph router, and real hardware measurements.
 - A fully standalone platform installer containing Python and Qt, or testing on unrelated operating systems. The supported launch path uses the isolated locked environment; the wheel contains the application and fonts.
 - Input-to-visible-freeze timing with a high-speed camera and long-session resource soak testing.
 
 The proposed API in PLAN.md intentionally remains distinct from the smaller implemented API. TEST_PLAN.md is a roadmap; passing implemented tests does not imply every listed future acceptance condition has passed.
+
+## Full-talk and scanner follow-up (2026-09-08)
+
+The default presentation has 16 corresponding chapters per canonical, 7 prepared detours
+and 3 prerequisite bridges (58 authored beats total). The old specimen remains available
+with `--slice`. All authored holds were rendered for typography/disclosure inspection;
+representative code, line-cache, Spectre and Meltdown diagrams and the decode chart were
+visually reviewed. The Normal route exports public fallback stills and a separate private script.
+Human composition, pacing and back-row legibility remain independent from those checks.
+
+Android 0.2.1 fixes missing AndroidX camera-permission helpers in the standalone APK.
+Assemble, 8 JVM tests and lint passed. The standalone API 35 scan-button path requested
+camera permission, resumed CaptureActivity and returned without a fatal exception.
+The initial emulator cold boot suffered system/app ANR delays under heavy resource load;
+the successful scanner run used the settled emulator with no instrumentation classpath.
+A DEX-definition gate now prevents this particular packaging regression in CI. Real
+projected QR decoding on the user's phone has not been verified.
+
+Normal Spectre scene, 120 offscreen frames at 1920×1080: median 15.9 ms, p95 23.2 ms,
+p99 25.7 ms on the target laptop. This includes model reconstruction and scene rendering;
+it is not compositor FPS or a two-window benchmark. The existing performance caveats remain.
+
+Desktop DNS-SD registration/removal now runs on a single worker, rather than blocking
+the GUI thread. A regression test verifies worker ownership and orderly shutdown.
+
+The running host was also discovered by a separate local DNS-SD browser. That verifies
+the desktop advertisement, not multicast reachability from the physical Android phone.

@@ -76,16 +76,28 @@ class SpectreScene(QGraphicsScene):
             self.addItem(item)
         for child in (self.core, self.local_cache, self.shared_cache):
             child.setParentItem(self.cpu)
+        from .talk_scene import StoryView
+
+        self.story = StoryView(self)
         self.refresh()
 
     def refresh(self):
         beat, p = self.session.beat, self.session.state.playback.position
         composition = beat.composition
         branch = composition in ("branch", "probe")
-        model = audience_model(self.session.model, secret=branch)
+        model = audience_model(self.session.model, secret=branch or beat.diagram.get("secret", False))
+        if self.session.presentation.id == "spectre-full" and not model["revealed"]:
+            model["memory"][12] = None
         for item in self.items_by_id.values():
             item.setVisible(not self.blank)
         if self.blank:
+            self.update()
+            return
+        self.story.hide()
+        if composition.startswith("story:"):
+            for item in self.items_by_id.values():
+                item.hide()
+            self.story.refresh(beat, p, model)
             self.update()
             return
         location = composition == "location"
@@ -130,7 +142,7 @@ class SpectreScene(QGraphicsScene):
         self.memory.place(memory)
         old_memory = (self.memory.values, self.memory.selected, self.memory.show_lines)
         self.memory.values = model["memory"]
-        self.memory.selected = model["selected"] if not branch else (12 if p >= 4 else None)
+        self.memory.selected = model["selected"] if not branch else (model["index"] if p >= 4 else None)
         self.memory.show_lines = composition in ("lines", "bridge", "probe")
         if old_memory != (self.memory.values, self.memory.selected, self.memory.show_lines):
             self.memory.update()
@@ -151,7 +163,7 @@ class SpectreScene(QGraphicsScene):
             )
             self.link1.set_route(route)
             start = register.port("right")
-            end = self.memory.byte_port(12)
+            end = self.memory.byte_port(model["index"])
             route2 = Route(
                 "register-byte",
                 (start, Point(1060, start.y), Point(1060, end.y - 10), Point(end.x, end.y - 10), end),
@@ -258,6 +270,13 @@ class SpectreScene(QGraphicsScene):
                 if p >= 4
                 else "Porównujemy ten sam adres, nie dwa różne programy."
             )
+        if beat.diagram.get("phase") == "bytes":
+            self.cache.body = (
+                f"Odczytana wartość: {model['result']}"
+                if p >= 4
+                else "Adres wskazuje miejsce; wartość to jego zawartość."
+            )
+            self.detail.body = "Adres 4 ≠ wartość 7. Kod korzysta z wartości spod wybranego adresu."
         if location:
             self.cpu.title = "PROCESOR"
             self.ram.title = "RAM"
@@ -278,9 +297,11 @@ class SpectreScene(QGraphicsScene):
     def drawForeground(self, p, rect):
         if self.blank:
             return
+        if self.session.beat.composition.startswith("story:"):
+            self.story.foreground(p)
         if self.session.beat.composition in ("branch", "probe"):
             text(p, (405, 590, 330, 26), "TAK · przewidywanie", 18, AMBER, True)
-            text(p, (1100, 612, 370, 26), "NIE · rozstrzygnięcie", 18, BLUE, True)
+            text(p, (1160, 604, 370, 26), "NIE · rozstrzygnięcie", 18, BLUE, True)
         if self.transition and self.transition.active and self.previous_frame is not None:
             p.save()
             p.setOpacity(self.transition.opacity)

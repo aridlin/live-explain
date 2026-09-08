@@ -26,7 +26,8 @@ from PySide6.QtWidgets import (
 from .runtime import Session
 from .visual import Transition
 from .preflight import load_fonts
-from .presentations.spectre import build
+from .presentations.talk import build
+from .presentations.spectre import build as build_slice
 from .presentations.spectre_scene import SpectreScene
 
 
@@ -176,7 +177,7 @@ class Presenter(QMainWindow):
         n, p = s.state.narrative, s.state.playback
         self.context.setText(f"PRYWATNY PULPIT  /  {n.canonical.upper()}  /  {s.beat.checkpoint}")
         self.cue.setText(s.beat.script.cue)
-        self.objective.setText("Cel: " + s.beat.script.objective)
+        self.objective.setText("Cel: " + s.controller_state()["script"]["objective"])
         origin = s.state.detours[-1].narrative.beat if s.state.detours else "główna narracja"
         pending = f" • Po moście: {n.bridge_target}" if n.bridge_target else ""
         self.return_label.setText(f"Powrót: {origin}{pending}\n{s.state.return_sentence}")
@@ -224,7 +225,7 @@ class Presenter(QMainWindow):
 class Instrument:
     def __init__(self, app, args):
         self.app = app
-        self.session = Session(build(), args.canonical)
+        self.session = Session((build_slice() if getattr(args, "slice", False) else build()), args.canonical)
         self.scene = SpectreScene(self.session)
         self.audience = Audience(self.scene)
         self.presenter = Presenter(self.session, self.send, self.audience)
@@ -417,6 +418,7 @@ def capture(scene, path, width=1600, height=900):
 
 def main():
     parser = argparse.ArgumentParser(description="Live Explain — live presentation instrument")
+    parser.add_argument("--slice", action="store_true", help="Use the compact engineering rehearsal")
     parser.add_argument("--remote", action="store_true", help="Open private phone pairing before the talk")
     parser.add_argument("--windowed", action="store_true")
     parser.add_argument(
@@ -447,7 +449,7 @@ def main():
     app.setDesktopFileName("pl.aridlin.LiveExplain")
     load_fonts()
     if args.capture or args.benchmark or args.export:
-        session = Session(build(), args.canonical)
+        session = Session((build_slice() if getattr(args, "slice", False) else build()), args.canonical)
         if args.beat:
             if args.beat not in session.presentation.beats:
                 parser.error("Unknown beat")
