@@ -107,3 +107,19 @@ Foundations: [Android TLS guidance](https://developer.android.com/privacy-and-se
 [ZXing Android Embedded](https://github.com/journeyapps/zxing-android-embedded).
 Session QR pinning differs from hard-coded public-service pins: it can be renewed locally
 without shipping an app update. Dependency notices are in `THIRD_PARTY.md`.
+
+### Scanner regression gate
+
+Version 0.2.1 explicitly packages AndroidX Core. ZXing's scanner invokes its camera
+permission helpers, but the scanner dependency alone did not package those classes in
+0.2.0. Instrumentation dependencies can mask that omission. CI now checks **definitions
+in the actual APK DEX files**, including `ContextCompat` and `ActivityCompat`:
+
+```sh
+python tools/check_android_apk.py android/app/build/outputs/apk/debug/app-debug.apk
+# Isolated emulator only: revokes camera permission, opens scanner, grants permission, returns.
+python tools/android_scanner_smoke.py
+```
+
+The standalone API 35 scanner open/permission/Back path passed on 2026-09-08.
+This is separate from decoding a real projected QR on a physical phone.
