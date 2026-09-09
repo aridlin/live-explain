@@ -4,7 +4,7 @@ A Python instrument for live technical explanation: three authored canonical nar
 
 **Status: complete authored Polish talk and native Android preview; physical room rehearsal remains required.** The fullscreen audience application has been launched and inspected on Hyprland. A native Android script reader and remote now connects locally through the phone hotspot, with private QR pairing and encrypted transport. See [Android setup](android/README.md).
 
-**[Download Android 0.2.1 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.2.1/live-explain-android-0.2.1-preview.apk)** · [Release history](https://github.com/aridlin/live-explain/releases)
+**[Download Android 0.2.2 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.2.2/live-explain-android-0.2.2-preview.apk)** · [Release history](https://github.com/aridlin/live-explain/releases)
 
 ![Cache timing specimen](tests/golden/normal-mid.png)
 

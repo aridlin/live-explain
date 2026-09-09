@@ -22,6 +22,10 @@ public class MainActivity extends Activity {
     private final ExecutorService network = Executors.newSingleThreadExecutor();
     private SharedPreferences prefs;
     private Connection connection;
+    private AlertDialog pairingDialog;
+    private EditText pairingInput;
+    private String pairingDraft = "";
+    private boolean pairingScanned;
     private Discovery discovery;
     private final Map<String,android.net.nsd.NsdServiceInfo> nearby=new LinkedHashMap<>();
     private CommandLedger ledger;
@@ -71,10 +75,23 @@ public class MainActivity extends Activity {
         });
         build();
         if (state != null) render();
+        if (saved != null) {
+            pairingDraft = saved.getString("pairingDraft", "");
+            pairingScanned = saved.getBoolean("pairingScanned", false);
+            if (saved.getBoolean("pairingDialogOpen", false)) pairDialog();
+        }
+    }
+    protected void onSaveInstanceState(Bundle out) {
+        boolean open = pairingDialog != null && pairingDialog.isShowing();
+        if (open) pairingDraft = pairingInput.getText().toString();
+        out.putString("pairingDraft", pairingDraft);
+        out.putBoolean("pairingScanned", pairingScanned);
+        out.putBoolean("pairingDialogOpen", open);
+        super.onSaveInstanceState(out);
     }
     protected void onResume() { super.onResume(); resumed = true; discovery.start(); ui.removeCallbacks(poll); ui.post(poll); }
     protected void onPause() { resumed = false; discovery.stop(); online = false; freshPending = ""; ui.removeCallbacks(poll); super.onPause(); }
-    protected void onDestroy() { ui.removeCallbacksAndMessages(null); network.shutdownNow(); super.onDestroy(); }
+    protected void onDestroy() { if(pairingDialog!=null)pairingDialog.dismiss(); ui.removeCallbacksAndMessages(null); network.shutdownNow(); super.onDestroy(); }
     public void onBackPressed() {
         if (expanded) toggleTray();
         else new AlertDialog.Builder(this).setMessage("Opuścić pulpit? Prezentacja pozostanie na laptopie.")
@@ -242,6 +259,7 @@ public class MainActivity extends Activity {
         });
     }
     private void pairDialog() {
+        if (pairingDialog != null && pairingDialog.isShowing()) return;
         LinearLayout box=column();box.setPadding(dp(20),dp(8),dp(20),dp(8));
         add(box,text("Telefon udostępnia hotspot. Laptop łączy się z nim przez Wi-Fi. Kod znajdziesz w prywatnym pulpicie laptopa.",16,ink));
         add(box,button("Znajdź prezentację w sieci ("+nearby.size()+")",()->{
@@ -255,12 +273,31 @@ public class MainActivity extends Activity {
                         else new AlertDialog.Builder(this).setMessage("Znaleziono "+info.getServiceName()+". Zeskanuj prywatny kod na laptopie, aby zatwierdzić pierwsze połączenie.").setPositiveButton("OK",null).show();
                     }).show();
         }));
-        add(box,button("Skanuj kod QR",()->new IntentIntegrator(this).setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-                .setPrompt("Prywatny kod z Live Explain").setBeepEnabled(false).setOrientationLocked(false).initiateScan()));
-        EditText input=new EditText(this);input.setHint("Lub wklej link parowania");input.setTextColor(ink);input.setSingleLine(true);
-        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);box.addView(input);
-        new AlertDialog.Builder(this).setTitle("Połączenie z laptopem").setView(box).setNegativeButton("Zamknij",null)
-                .setPositiveButton("Połącz",(d,w)->pair(input.getText().toString())).show();
+        pairingInput=new EditText(this);pairingInput.setHint("Lub wklej link parowania");pairingInput.setTextColor(ink);pairingInput.setSingleLine(true);
+        pairingInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+        pairingInput.setText(pairingDraft);
+        add(box,button("Skanuj kod QR",()->{
+            pairingDraft=pairingInput.getText().toString();
+            pairingDialog.dismiss();
+            new IntentIntegrator(this).setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+                .setPrompt("Prywatny kod z Live Explain").setBeepEnabled(false).setOrientationLocked(false).initiateScan();
+        }));
+        if (pairingScanned) add(box,text("Kod wczytany. Wybierz Połącz, aby rozpocząć połączenie.",16,mint));
+        box.addView(pairingInput);
+        pairingDialog=new AlertDialog.Builder(this).setTitle("Połączenie z laptopem").setView(box)
+                .setNegativeButton("Zamknij",(d,w)->{pairingDraft=pairingInput.getText().toString();})
+                .setPositiveButton("Połącz",null).create();
+        pairingDialog.show();
+        pairingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            pairingDraft=pairingInput.getText().toString().trim();
+            try { new Connection(pairingDraft); }
+            catch(Exception invalid) {
+                pairingInput.setError("Wczytaj kod QR lub wklej pełny link parowania Live Explain.");
+                return;
+            }
+            pairingDialog.dismiss();
+            pair(pairingDraft);
+        });
     }
     private void pair(String uri) {
         try {
@@ -278,7 +315,10 @@ public class MainActivity extends Activity {
     }
     protected void onActivityResult(int request,int result,Intent data) {
         IntentResult scan=IntentIntegrator.parseActivityResult(request,result,data);
-        if(scan!=null){if(scan.getContents()!=null)pair(scan.getContents());}
+        if(scan!=null){
+            if(scan.getContents()!=null){pairingDraft=scan.getContents();pairingScanned=true;}
+            pairDialog();
+        }
         else super.onActivityResult(request,result,data);
     }
 }

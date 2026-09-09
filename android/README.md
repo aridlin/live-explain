@@ -9,12 +9,12 @@ Kotlin/Compose foundation; presentation logic remains in Python.
 
 ## Before the talk
 
-1. Download [Android 0.2.1 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.2.1/live-explain-android-0.2.1-preview.apk) and install it on Android 8 or newer. [Release history and checksums](https://github.com/aridlin/live-explain/releases).
+1. Download [Android 0.2.2 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.2.2/live-explain-android-0.2.2-preview.apk) and install it on Android 8 or newer. [Release history and checksums](https://github.com/aridlin/live-explain/releases).
 2. Enable the phone's hotspot and connect the laptop to it. Internet access is unnecessary.
 3. Start the laptop with `./run --remote`. Alternatively open the private presenter
    with **P**, then **Połącz telefon**. Pair before projecting private UI.
 4. In the private pairing window choose the laptop's Wi-Fi interface/address.
-5. On Android choose **Połączenie → Skanuj kod QR** and scan that window. Pasting the
+5. On Android choose **Połączenie → Skanuj kod QR** and scan that window. The app returns to the populated pairing dialog; tap **Połącz** to connect. Pasting the
    complete private pairing link is an alternative if camera permission is unavailable.
 6. Check **Połączono**, exercise pause/next, open the controls tray, test blank/unblank,
    and select the HDMI output before leaving the laptop. Keep the phone app in the foreground.
@@ -123,3 +123,25 @@ python tools/android_scanner_smoke.py
 
 The standalone API 35 scanner open/permission/Back path passed on 2026-09-08.
 This is separate from decoding a real projected QR on a physical phone.
+
+### Pairing result regression (0.2.2)
+
+Scanning fills the pairing draft and reopens the dialog for one explicit **Połącz**
+step. It no longer connects behind an empty, still-open dialog. Invalid/empty manual
+input stays editable with an inline error; cancelling a scan preserves the draft.
+The draft is included in activity saved state.
+
+`PairingFlowTest` intercepts only the external scanner activity result while exercising
+the real scan button, Android result delivery, restored field and Connect button. It
+also covers empty input, cancelled scans and saved-state contents. It does not pretend
+to test optical QR decoding. Run on an isolated emulator (it clears test app preferences):
+
+```sh
+android/gradlew -p android assembleDebug assembleDebugAndroidTest
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb install -r android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w -e class pl.aridlin.liveexplain.PairingFlowTest pl.aridlin.liveexplain.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+On 2026-09-09 the native `PairingFlowTest` passed on API 35, alongside the Android
+JVM tests and lint. The release APK retains the prior preview signing identity.
