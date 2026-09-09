@@ -9,7 +9,7 @@ Kotlin/Compose foundation; presentation logic remains in Python.
 
 ## Before the talk
 
-1. Install the preview APK on Android 8 or newer.
+1. Download [Android 0.2.1 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.2.1/live-explain-android-0.2.1-preview.apk) and install it on Android 8 or newer. [Release history and checksums](https://github.com/aridlin/live-explain/releases).
 2. Enable the phone's hotspot and connect the laptop to it. Internet access is unnecessary.
 3. Start the laptop with `./run --remote`. Alternatively open the private presenter
    with **P**, then **Połącz telefon**. Pair before projecting private UI.
