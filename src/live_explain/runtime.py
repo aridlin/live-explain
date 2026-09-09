@@ -252,7 +252,35 @@ class Session:
     def controller_state(self):
         at_end = self.state.playback.position >= self.beat.holds[-1]
         returning = at_end and self.state.detours and not self.state.narrative.bridge_target
+        position = self.state.playback.position
+        hold_index = max(i for i, hold in enumerate(self.beat.holds) if hold <= position + 1e-8)
+        between = not any(abs(position - hold) < 1e-8 for hold in self.beat.holds)
+        route = self.presentation.routes[self.state.narrative.canonical]
+        finished = (
+            at_end and not returning and not self.state.narrative.bridge_target and self.beat.id == route[-1]
+        )
+        cues = self.beat.stage_cues
         return dict(
+            playback_phase="running"
+            if self.state.playback.playing
+            else "paused"
+            if between
+            else "finished"
+            if finished
+            else "beat_end"
+            if at_end
+            else "hold",
+            stage_index=hold_index,
+            stage_count=len(self.beat.holds),
+            stage_cue=cues[hold_index] if cues else self.beat.script.objective,
+            upcoming_cue=cues[min(hold_index + 1, len(cues) - 1)]
+            if cues and not at_end
+            else self.beat.script.next_sentence
+            if at_end
+            else "Kolejny fragment animacji w tym samym wyjaśnieniu.",
+            return_title=self.presentation.beats[self.state.detours[-1].narrative.beat].title
+            if self.state.detours
+            else None,
             next_kind="return" if returning else "advance",
             next_label="Wróć do wyjaśnienia"
             if returning

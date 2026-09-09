@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     private String controller, shownKey = "", trayKey = "", receipt = "", serverAddress = "", freshPending = "";
     private LinearLayout root, tray;
     private ScrollView reader, trayScroll;
-    private TextView status, location, script, objective, returnTo, progress;
+    private TextView status, location, script, objective, returnTo, progress, actionTitle, actionHint;
     private Button next, pause, trayToggle;
     private final List<Button> commands = new ArrayList<>();
     private final Map<String,Integer> scrollPositions = new HashMap<>();
@@ -110,6 +110,10 @@ public class MainActivity extends Activity {
         b.setOnClickListener(v->{ v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); action.run(); });
         return b;
     }
+    private void icon(Button button, String name) {
+        button.setCompoundDrawablesRelative(new ControlIcon(name,ink,dp(22)),null,null,null);
+        button.setCompoundDrawablePadding(dp(8));
+    }
     private void add(LinearLayout box, View view) {
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,dp(4),0,dp(4)); box.addView(view,p);
     }
@@ -118,29 +122,32 @@ public class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
         TextView brand = text("LIVE EXPLAIN",12,mint); brand.setLetterSpacing(.15f); brand.setTypeface(null,Typeface.BOLD);
         header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
-        header.addView(button("Połączenie",this::showConnectionDialog)); root.addView(header);
+        Button connectButton=button("Połączenie",this::showConnectionDialog);icon(connectButton,"wifi");header.addView(connectButton); root.addView(header);
         status = text("Wybierz prezentację w tej samej sieci Wi-Fi",12,mint); root.addView(status);
-        location = text("Twój skrypt. Twój rytm.",24,ink); location.setTypeface(null,Typeface.BOLD); root.addView(location);
+        location = text("Twój skrypt. Twój rytm.",21,ink); location.setTypeface(null,Typeface.BOLD); root.addView(location);
         progress = text("",12,mint); root.addView(progress);
         reader = new ScrollView(this); reader.setFillViewport(true);
         LinearLayout body = column(); body.setPadding(dp(12),dp(8),dp(12),dp(20)); body.setBackground(surface(card));
         objective = text("Połącz telefon i laptop z tą samą siecią Wi-Fi. Wybierz prezentację w menu Połączenie.",14,mint);
-        script = text("Zeskanuj prywatny kod parowania. Skrypt pozostanie czytelny również podczas chwilowej utraty połączenia.",fontSize,ink);
+        script = text("Wybierz znalezioną prezentację lub wpisz adres laptopa. Skrypt pozostaje dostępny również podczas chwilowej utraty połączenia.",fontSize,ink);
         returnTo = text("",15,mint);
         body.addView(objective); body.addView(script); body.addView(returnTo); reader.addView(body);
         root.addView(reader,new LinearLayout.LayoutParams(-1,0,1));
+        actionTitle=text("Najpierw połącz z laptopem",15,mint);actionTitle.setTypeface(null,Typeface.BOLD);root.addView(actionTitle);
+        actionHint=text("Tutaj zobaczysz, kiedy mówić, a kiedy uruchomić animację.",13,ink);root.addView(actionHint);
         LinearLayout primary = new LinearLayout(this);
-        pause = button("Pauza",()->send("pause",null)); next = button("Dalej  →",()->send(state==null?"advance":state.optString("next_kind","advance"),null));
+        pause = button("Zatrzymaj",()->send("pause",null)); icon(pause,"pause");
+        next = button("Połącz z laptopem",()->{if(state!=null){ControlState c=ControlState.from(state);if(c.enabled)send(c.kind,c.value);}});
         next.setBackground(surface(Color.rgb(39,111,94)));
-        LinearLayout.LayoutParams half = new LinearLayout.LayoutParams(0,dp(60),1); half.setMargins(dp(3),dp(8),dp(3),dp(4));
-        primary.addView(pause,half); primary.addView(next,new LinearLayout.LayoutParams(half)); root.addView(primary);
-        trayToggle = button("⌃  Sterowanie i ścieżki",this::toggleTray); root.addView(trayToggle);
+        LinearLayout.LayoutParams half = new LinearLayout.LayoutParams(0,-2,1); half.setMargins(dp(3),dp(8),dp(3),dp(4));
+        primary.addView(pause,half); LinearLayout.LayoutParams mainAction=new LinearLayout.LayoutParams(half);mainAction.weight=1.65f;primary.addView(next,mainAction); root.addView(primary);
+        trayToggle = button("Ścieżki i narzędzia",this::toggleTray); icon(trayToggle,"up");root.addView(trayToggle);
         trayScroll = new ScrollView(this); tray = column(); trayScroll.addView(tray); trayScroll.setVisibility(View.GONE);
         root.addView(trayScroll,new LinearLayout.LayoutParams(-1,Math.min(dp(290),(int)(getResources().getDisplayMetrics().heightPixels*.36f))));
         updateEnabled();
     }
     private void toggleTray() {
-        expanded = !expanded; trayToggle.setText(expanded ? "⌄  Schowaj sterowanie" : "⌃  Sterowanie i ścieżki");
+        expanded = !expanded; trayToggle.setText(expanded ? "Schowaj panel" : "Ścieżki i narzędzia");icon(trayToggle,expanded?"down":"up");
         trayScroll.setVisibility(expanded ? View.VISIBLE : View.GONE);
         if (expanded) { trayScroll.setAlpha(0); trayScroll.setTranslationY(dp(14));
             trayScroll.animate().alpha(1).translationY(0).setDuration(220).setInterpolator(new DecelerateInterpolator()).start(); }
@@ -150,43 +157,47 @@ public class MainActivity extends Activity {
             if (confirm) new AlertDialog.Builder(this).setTitle(title).setMessage("Zmienić bieżącą kontynuację?")
                     .setNegativeButton("Zostań",null).setPositiveButton("Przejdź",(d,w)->send(kind,value)).show();
             else send(kind,value);
-        }); commands.add(b); add(tray,b); return b;
+        }); b.setTag(kind+":"+(value==null?"":value));
+        icon(b,kind.equals("detour")?"branch":kind.equals("depth")?"text":kind.equals("finish")?"skip":kind.equals("blank")||kind.equals("output")?"screen":kind);
+        commands.add(b); add(tray,b); return b;
     }
     private void render() {
         if (state == null) return;
         String key = state.optString("epoch")+":"+state.optString("beat");
         JSONObject notes = state.optJSONObject("script"); if (notes == null) notes = new JSONObject();
         location.setText(state.optString("title"));
-        next.setText(state.optString("next_label","Dalej")+"  →");
+
         String route = state.optString("canonical");
         String routeLabel = route.equals("simple") ? "Super prosta" : route.equals("deep") ? "Szczegółowa" : "Normalna";
         int seconds = (int)state.optDouble("elapsed");
         progress.setText(routeLabel+"  •  "+String.format(Locale.ROOT,"%02d:%02d",seconds/60,seconds%60)
-                +"  •  "+(state.optBoolean("blank") ? "EKRAN ZASŁONIĘTY" : state.optBoolean("transitioning") ? "ZMIANA SCENY" : state.optBoolean("playing") ? "ODTWARZANIE" : "PAUZA"));
-        objective.setText("CEL  ·  "+notes.optString("objective"));
+               +"  •  Widok "+(state.optInt("stage_index")+1)+" / "+state.optInt("stage_count",1));
+        objective.setText("TERAZ  ·  "+state.optString("stage_cue",notes.optString("objective")));
         String words = compact ? notes.optString("cue") : notes.optString("wording");
-        words += "\n\nDALEJ\n"+notes.optString("next_sentence");
+        words += "\n\nPO KOLEJNYM RUCHU / PRZEJŚCIU\n"+state.optString("upcoming_cue",notes.optString("next_sentence"));
         if (!compact) words += "\n\nGRANICE WYJAŚNIENIA\n"+notes.optString("boundary")+"\n\nKRÓTKI POWRÓT\n"+notes.optString("recap");
         if (!script.getText().toString().equals(words)) script.setText(words);
         if (!shownKey.equals(key)) {
             scrollPositions.put(shownKey,reader.getScrollY()); shownKey = key;
             int y = scrollPositions.getOrDefault(key,0); reader.post(()->reader.scrollTo(0,y));
         }
-        String origin = state.isNull("return_to") ? "Główna narracja" : "Powrót: "+state.optString("return_to");
+        String origin = state.isNull("return_to") ? "Główna narracja" : "Powrót: "+state.optString("return_title",state.optString("return_to"));
         returnTo.setText(origin+"\n"+state.optString("return_sentence")+
                 (state.isNull("bridge_target") ? "" : "\nPo moście: "+state.optString("bridge_target")));
-        String newTray = key+state.optString("routes")+state.optString("branches")+state.optString("outputs")+state.optBoolean("blank");
+        String newTray = key+route+state.optString("return_to")+state.optString("routes")+state.optString("branches")+state.optString("outputs")+state.optBoolean("blank");
         if (!trayKey.equals(newTray)) {
             trayKey = newTray; tray.removeAllViews(); commands.clear();
-            add(tray,text("TRZY WERSJE TEJ SAMEJ OPOWIEŚCI",12,mint));
+            add(tray,text("GŁÓWNA OPOWIEŚĆ · WYBIERZ SZCZEGÓŁOWOŚĆ",12,mint));
             LinearLayout routeRow=new LinearLayout(this); add(tray,routeRow);
             JSONArray routes = state.optJSONArray("routes");
             if (routes != null) for (int i=0;i<routes.length();i++) {
                 JSONObject r=routes.optJSONObject(i); if(r==null)continue;
                 String gaps=r.optString("missing","[]");
-                Button routeButton=commandButton((r.optString("id").equals(route) ? "●  " : "")+r.optString("title")+
+                Button routeButton=commandButton(r.optString("title")+
                         (gaps.equals("[]") ? "" : "\nprzez most"),"depth",r.optString("id"),true);
                 tray.removeView(routeButton);routeButton.setTextSize(13);
+                routeButton.setCompoundDrawablesRelative(null,null,null,null);
+                if(r.optString("id").equals(route)) {routeButton.setBackground(surface(Color.rgb(39,111,94)));routeButton.setText("Wybrana\n"+r.optString("title"));}
                 LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(72),1);rp.setMargins(dp(2),0,dp(2),0);routeRow.addView(routeButton,rp);
             }
             add(tray,text("MOŻLIWE WYJAŚNIENIA",12,mint));
@@ -196,9 +207,7 @@ public class MainActivity extends Activity {
                 commandButton(b.optString("title"),"detour",b.optString("id"),false);}
             commandButton("Wróć do przerwanego wyjaśnienia","return",null,false);
             add(tray,text("ODTWARZANIE I RATUNEK",12,mint));
-            commandButton("Wznów animację","play",null,false);
-            commandButton("Jeden krok","step",null,false);
-            commandButton("Dokończ ruch / przejście","finish",null,false);
+            commandButton("Pomiń trwający ruch","finish",null,false);
             commandButton("Powtórz bieżący krok","replay",null,false);
             commandButton("Cofnij nawigację","undo",null,false);
             commandButton(state.optBoolean("blank") ? "Pokaż publiczny ekran" : "Zasłoń publiczny ekran","blank",state.optBoolean("blank") ? "off" : "on",false);
@@ -216,10 +225,28 @@ public class MainActivity extends Activity {
     private void updateEnabled() {
         if(next==null)return;
         boolean ready=online && ledger.pending().isEmpty() && state!=null;
-        next.setEnabled(ready && !state.optBoolean("playing") && !state.optBoolean("transitioning") && !state.optBoolean("blank"));
-        pause.setEnabled(ready);
-        for(Button b:commands)b.setEnabled(ready);
-        next.setAlpha(next.isEnabled()?1:.4f); pause.setAlpha(pause.isEnabled()?1:.4f);
+        ControlState c=state==null?null:ControlState.from(state);
+        next.setEnabled(ready && c.enabled);
+        pause.setEnabled(ready && c.moving);
+        if(c!=null) {
+            next.setText(c.label);icon(next,c.icon);
+            actionTitle.setText(!online?"Połączenie przerwane":!ledger.pending().isEmpty()?"Czekam na potwierdzenie":c.title);
+            actionHint.setText(!online?"Skrypt jest zachowany. Sterowanie wróci po połączeniu z laptopem.":!ledger.pending().isEmpty()?"Nie dotykaj ponownie — sprawdzam wynik poprzedniego polecenia.":c.hint);
+        }
+        for(Button b:commands) {
+            String tag=String.valueOf(b.getTag());String kind=tag.split(":",2)[0];
+            boolean allowed=ready;
+            if(ready) {
+                if(kind.equals("return"))allowed=!state.isNull("return_to") && !c.transition;
+                else if(kind.equals("undo"))allowed=state.optBoolean("can_undo");
+                else if(kind.equals("finish"))allowed=!state.optBoolean("blank") && (c.transition || c.moving || state.optString("playback_phase").equals("paused"));
+                else if(kind.equals("depth"))allowed=!c.transition && !tag.equals("depth:"+state.optString("canonical"));
+                else if(kind.equals("detour"))allowed=!c.transition;
+                else if(kind.equals("replay"))allowed=!c.transition && !c.moving && state.optDouble("position")>0;
+            }
+            b.setEnabled(allowed);b.setAlpha(allowed || tag.equals("depth:"+state.optString("canonical"))?1:.4f);
+        }
+        next.setAlpha(next.isEnabled()?1:.45f); pause.setAlpha(pause.isEnabled()?1:.4f);
         status.setText(connection==null ? "Wybierz prezentację w menu Połączenie" : !ledger.pending().isEmpty() ? "Ustalam wynik polecenia — bez powtórnego przejścia" : online ? "Połączono  ·  "+(receipt.isEmpty()?"laptop steruje sesją":receipt) : (connectionIssue.isEmpty()?"Łączenie z "+serverAddress+"…":connectionIssue+" · próbuję ponownie"));
         status.setTextColor(online?mint:Color.rgb(245,195,125));
     }

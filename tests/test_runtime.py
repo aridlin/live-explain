@@ -206,3 +206,24 @@ def test_rehearsal_replay(session):
     clone = Session(build())
     clone.replay_recording(session.export_recording())
     assert clone.digest() == session.digest()
+
+
+def test_controller_explains_hold_interruption_and_end(session):
+    state = session.controller_state()
+    assert state["playback_phase"] == "hold"
+    assert state["stage_index"] == 0
+    session.command("advance")
+    session.tick(0.3)
+    assert session.controller_state()["playback_phase"] == "running"
+    session.command("pause")
+    assert session.controller_state()["playback_phase"] == "paused"
+    session.command("detour", "cache-location")
+    assert session.controller_state()["return_title"] == session.presentation.beats["normal.timing"].title
+    session.seek(session.beat.holds[-1])
+    assert session.controller_state()["playback_phase"] == "beat_end"
+    assert session.controller_state()["next_kind"] == "return"
+    session.command("return")
+    assert session.controller_state()["playback_phase"] == "paused"
+    session._entry(session.presentation.routes["normal"][-1])
+    session.seek(session.beat.holds[-1])
+    assert session.controller_state()["playback_phase"] == "finished"

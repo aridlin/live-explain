@@ -39,6 +39,15 @@ public class PresenterFlowTest {
         }
         fail("Controller did not synchronize");
     }
+    private void settleMovement() throws Exception {
+        waitReady();
+        boolean[] active={false};
+        inst.runOnMainSync(()->{try {
+            org.json.JSONObject s=(org.json.JSONObject)field("state");
+            active[0]=s.optBoolean("transitioning") || s.optBoolean("playing") || s.optString("playback_phase").equals("paused");
+        }catch(Exception e){throw new RuntimeException(e);}});
+        if(active[0]) {click("Pomiń trwający ruch");Thread.sleep(700);waitReady();}
+    }
     private void screenshot(String name) {
         inst.runOnMainSync(()->{
             View v=activity.getWindow().getDecorView();Bitmap b=Bitmap.createBitmap(v.getWidth(),v.getHeight(),Bitmap.Config.ARGB_8888);
@@ -65,9 +74,14 @@ public class PresenterFlowTest {
                 }catch(Exception e){throw new RuntimeException(e);}
             });
             waitReady();screenshot("reader.png");
-            click("Dalej");Thread.sleep(2700);waitReady();
-            click("Sterowanie i ścieżki");
-            click("Dokończ ruch");Thread.sleep(1000);waitReady();screenshot("tray.png");
+            inst.runOnMainSync(()->{try {
+                assertEquals("Uruchom animację",((Button)field("next")).getText().toString());
+                assertFalse(((Button)field("pause")).isEnabled());
+            }catch(Exception e){throw new RuntimeException(e);}});
+            click("Uruchom animację");Thread.sleep(700);waitReady();
+            screenshot("motion.png");
+            click("Ścieżki i narzędzia");
+            settleMovement();screenshot("tray.png");
             inst.runOnMainSync(()->{
                 try { org.json.JSONObject state=(org.json.JSONObject)field("state");
                     interruptedPosition=state.getDouble("position");
@@ -78,14 +92,18 @@ public class PresenterFlowTest {
             });
             Thread.sleep(1000);waitReady();
             inst.runOnMainSync(()->{try{assertEquals("shared.location",((org.json.JSONObject)field("state")).getString("beat"));}catch(Exception e){throw new RuntimeException(e);}});
-            click("Dokończ ruch");Thread.sleep(1000);waitReady();
+            settleMovement();
             click("Wróć do przerwanego");Thread.sleep(1000);waitReady();
             inst.runOnMainSync(()->{try{
                 org.json.JSONObject state=(org.json.JSONObject)field("state");
                 assertEquals("normal.timing",state.getString("beat"));assertEquals(interruptedPosition,state.getDouble("position"),.001);assertFalse(state.getBoolean("playing"));
             }catch(Exception e){throw new RuntimeException(e);}});
             click("Zasłoń publiczny");Thread.sleep(700);waitReady();
-            click("Pokaż publiczny");Thread.sleep(700);waitReady();
+            inst.runOnMainSync(()->{try {
+                assertEquals("Pokaż ekran",((Button)field("next")).getText().toString());
+                ((Button)field("next")).performClick();
+            }catch(Exception e){throw new RuntimeException(e);}});
+            Thread.sleep(700);waitReady();
         } finally {inst.runOnMainSync(()->activity.finish());}
     }
 }

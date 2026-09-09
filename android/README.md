@@ -1,6 +1,6 @@
 # Android presenter — open local connection
 
-[Download Android 0.3.0 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.3.0/live-explain-android-0.3.0-preview.apk) · [Releases and checksums](https://github.com/aridlin/live-explain/releases)
+[Download Android 0.4.0 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.4.0/live-explain-android-0.4.0-preview.apk) · [Releases and checksums](https://github.com/aridlin/live-explain/releases)
 
 Native Android 8+ script reader and remote. No QR code, camera permission, pairing token,
 certificate enrollment or account is needed. Any client on a reachable local network can
@@ -35,8 +35,27 @@ Multicast-blocking networks can use the direct IP option; client isolation can b
 
 The full Polish wording is the primary reader. Compact cues, font sizing and script scroll
 positions support glancing while speaking. The expandable tray contains three canonical
-continuations, prepared detours, return, undo, play, step, finish, replay, blanking and
-fullscreen output recovery. Next/Pause remain visible. The screen stays awake and private
+continuations, prepared detours, return, undo, finish, replay, blanking and
+fullscreen output recovery. A labelled vector icon accompanies each action. Current-route
+selection is explicit and unavailable actions are disabled.
+
+The primary controls stay visible, with a status and instruction above them:
+
+- **Teraz mów · obraz czeka**: explain the current image, then **Uruchom animację**.
+- **Animacja trwa**: it stops automatically at the next authored hold; **Zatrzymaj** freezes it early.
+- **Animacja wstrzymana**: **Kontynuuj ruch** resumes from the interrupted position.
+- **Zmiana sceny wstrzymana**: **Wznów przejście** completes the composition change.
+- **Ten punkt jest zakończony**: **Następny punkt** enters the next beat only on a tap.
+- **Odpowiedź zakończona**: the primary action returns to the interrupted explanation.
+- A covered audience screen gets **Pokaż ekran** directly on the primary button.
+
+The reader shows the current authored stage cue, stage count and upcoming visual cue.
+The tray's **Pomiń trwający ruch** only applies to active or interrupted motion, so it
+cannot accidentally skip a fresh segment at a speaking hold. The desktop remains the
+source of stage position and content; the Android projection does not advance time.
+Version 0.4.0 needs the current desktop for these richer stage cues.
+
+ The screen stays awake and private
 from screenshots/recent-app previews. Backup remains disabled.
 
 HTTP is unencrypted and intentionally unauthenticated. Controller UUIDs identify retry

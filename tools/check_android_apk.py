@@ -27,6 +27,8 @@ def definitions(apk):
 
 REQUIRED = {
     "Lpl/aridlin/liveexplain/MainActivity;",
+    "Lpl/aridlin/liveexplain/ControlState;",
+    "Lpl/aridlin/liveexplain/ControlIcon;",
     "Lpl/aridlin/liveexplain/Connection;",
     "Lpl/aridlin/liveexplain/Discovery;",
     "Lpl/aridlin/liveexplain/CommandLedger;",

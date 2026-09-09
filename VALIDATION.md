@@ -2,6 +2,22 @@
 
 The complete authored talk is implemented. This record separates software checks from the remaining physical-phone, projector and spoken-rehearsal gates. It does not claim every long-term engine feature is complete.
 
+## Android control guidance (0.4.0)
+
+The primary action now distinguishes speaking holds, running animation, interrupted
+motion, paused composition transitions, end-of-beat navigation, detour return and the
+end of a canonical. Blanking recovery is available directly on the main button.
+Labelled native vector icons accompany controls; the tray highlights the current route
+and disables unavailable actions. Finish is unavailable at a fresh speaking hold.
+The desktop publishes authored current/upcoming stage cues and human-readable return
+names. No automatic narrative advancement was added.
+
+Validation: 83 Python tests and 14 Android JVM tests passed; Android lint and assembly
+passed. A native API 35 emulator rehearsal passed direct connection, primary action,
+exact paused detour return and primary-button unblanking. Reader and expanded-tray
+screenshots were inspected at a 720 x 1280 capture size. This does not establish physical
+phone ergonomics or room latency; those still need actual-device rehearsal.
+
 ## Current connection mode (Android 0.3.0)
 
 At the user's request, QR/token/certificate pairing was removed. The desktop now starts
