@@ -9,8 +9,6 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.*;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.*;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
 import org.json.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -22,10 +20,11 @@ public class MainActivity extends Activity {
     private final ExecutorService network = Executors.newSingleThreadExecutor();
     private SharedPreferences prefs;
     private Connection connection;
-    private AlertDialog pairingDialog;
-    private EditText pairingInput;
-    private String pairingDraft = "";
-    private boolean pairingScanned;
+    private AlertDialog connectionDialog;
+    private EditText addressInput;
+    private String addressDraft = "";
+    private LinearLayout serverList;
+    private String connectionIssue = "";
     private Discovery discovery;
     private final Map<String,android.net.nsd.NsdServiceInfo> nearby=new LinkedHashMap<>();
     private CommandLedger ledger;
@@ -33,7 +32,7 @@ public class MainActivity extends Activity {
     private boolean busy, online, resumed, expanded, compact;
     private int generation, fontSize = 22;
     private long lastSync;
-    private String controller, shownKey = "", trayKey = "", receipt = "", pairing = "", freshPending = "";
+    private String controller, shownKey = "", trayKey = "", receipt = "", serverAddress = "", freshPending = "";
     private LinearLayout root, tray;
     private ScrollView reader, trayScroll;
     private TextView status, location, script, objective, returnTo, progress;
@@ -59,39 +58,39 @@ public class MainActivity extends Activity {
         compact = prefs.getBoolean("compact",false);
         try { ledger = new CommandLedger(prefs.getString("pending", "")); }
         catch (Exception e) { try { ledger = new CommandLedger(""); } catch (Exception ignored) {} }
-        pairing = prefs.getString("pairing", "");
-        try { if (!pairing.isEmpty()) connection = new Connection(pairing); } catch (Exception ignored) {}
+        serverAddress = prefs.getString("server", "");
+        prefs.edit().remove("pairing").apply();
+        try { if (!serverAddress.isEmpty()) connection = new Connection(serverAddress); } catch (Exception ignored) {}
         try { state = new JSONObject(prefs.getString("state", "")); } catch (Exception ignored) {}
-        discovery=new Discovery(this,(info,pin)->{
-            if(pin==null){nearby.remove(info.getServiceName());return;}
-            nearby.put(info.getServiceName(),info);
-            if(connection!=null && !online) {
-                String moved=connection.relocated(info.getHost().getHostAddress(),info.getPort(),pin);
-                if(moved!=null && !moved.equals(pairing)) {
-                    try{connection=new Connection(moved);pairing=moved;prefs.edit().putString("pairing",moved).apply();}
-                    catch(Exception ignored){}
+        discovery=new Discovery(this,(info,epoch)->{
+            if(epoch==null)nearby.remove(info.getServiceName());
+            else {
+                nearby.put(info.getServiceName(),info);
+                if(connection!=null && !online && state!=null && epoch.equals(state.optString("epoch"))) {
+                    String moved="http://"+info.getHost().getHostAddress()+":"+info.getPort();
+                    if(!moved.equals(serverAddress))connect(moved);
                 }
             }
+            refreshServers();
         });
         build();
         if (state != null) render();
+        if (saved == null && connection == null) showConnectionDialog();
         if (saved != null) {
-            pairingDraft = saved.getString("pairingDraft", "");
-            pairingScanned = saved.getBoolean("pairingScanned", false);
-            if (saved.getBoolean("pairingDialogOpen", false)) pairDialog();
+            addressDraft = saved.getString("addressDraft", "");
+            if (saved.getBoolean("connectionDialogOpen", false)) showConnectionDialog();
         }
     }
     protected void onSaveInstanceState(Bundle out) {
-        boolean open = pairingDialog != null && pairingDialog.isShowing();
-        if (open) pairingDraft = pairingInput.getText().toString();
-        out.putString("pairingDraft", pairingDraft);
-        out.putBoolean("pairingScanned", pairingScanned);
-        out.putBoolean("pairingDialogOpen", open);
+        boolean open = connectionDialog != null && connectionDialog.isShowing();
+        if (open) addressDraft = addressInput.getText().toString();
+        out.putString("addressDraft", addressDraft);
+        out.putBoolean("connectionDialogOpen", open);
         super.onSaveInstanceState(out);
     }
     protected void onResume() { super.onResume(); resumed = true; discovery.start(); ui.removeCallbacks(poll); ui.post(poll); }
     protected void onPause() { resumed = false; discovery.stop(); online = false; freshPending = ""; ui.removeCallbacks(poll); super.onPause(); }
-    protected void onDestroy() { if(pairingDialog!=null)pairingDialog.dismiss(); ui.removeCallbacksAndMessages(null); network.shutdownNow(); super.onDestroy(); }
+    protected void onDestroy() { if(connectionDialog!=null)connectionDialog.dismiss(); ui.removeCallbacksAndMessages(null); network.shutdownNow(); super.onDestroy(); }
     public void onBackPressed() {
         if (expanded) toggleTray();
         else new AlertDialog.Builder(this).setMessage("Opuścić pulpit? Prezentacja pozostanie na laptopie.")
@@ -119,13 +118,13 @@ public class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
         TextView brand = text("LIVE EXPLAIN",12,mint); brand.setLetterSpacing(.15f); brand.setTypeface(null,Typeface.BOLD);
         header.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
-        header.addView(button("Połączenie",this::pairDialog)); root.addView(header);
-        status = text("Połącz telefon przed rozpoczęciem",12,mint); root.addView(status);
+        header.addView(button("Połączenie",this::showConnectionDialog)); root.addView(header);
+        status = text("Wybierz prezentację w tej samej sieci Wi-Fi",12,mint); root.addView(status);
         location = text("Twój skrypt. Twój rytm.",24,ink); location.setTypeface(null,Typeface.BOLD); root.addView(location);
         progress = text("",12,mint); root.addView(progress);
         reader = new ScrollView(this); reader.setFillViewport(true);
         LinearLayout body = column(); body.setPadding(dp(12),dp(8),dp(12),dp(20)); body.setBackground(surface(card));
-        objective = text("Włącz hotspot telefonu, połącz z nim laptop i wybierz na laptopie „Połącz telefon”.",14,mint);
+        objective = text("Połącz telefon i laptop z tą samą siecią Wi-Fi. Wybierz prezentację w menu Połączenie.",14,mint);
         script = text("Zeskanuj prywatny kod parowania. Skrypt pozostanie czytelny również podczas chwilowej utraty połączenia.",fontSize,ink);
         returnTo = text("",15,mint);
         body.addView(objective); body.addView(script); body.addView(returnTo); reader.addView(body);
@@ -221,7 +220,7 @@ public class MainActivity extends Activity {
         pause.setEnabled(ready);
         for(Button b:commands)b.setEnabled(ready);
         next.setAlpha(next.isEnabled()?1:.4f); pause.setAlpha(pause.isEnabled()?1:.4f);
-        status.setText(connection==null ? "Zeskanuj kod, aby połączyć" : !ledger.pending().isEmpty() ? "Ustalam wynik polecenia — bez powtórnego przejścia" : online ? "Połączono  ·  "+(receipt.isEmpty()?"laptop steruje sesją":receipt) : "Brak połączenia · skrypt zapisany · próbuję ponownie");
+        status.setText(connection==null ? "Wybierz prezentację w menu Połączenie" : !ledger.pending().isEmpty() ? "Ustalam wynik polecenia — bez powtórnego przejścia" : online ? "Połączono  ·  "+(receipt.isEmpty()?"laptop steruje sesją":receipt) : (connectionIssue.isEmpty()?"Łączenie z "+serverAddress+"…":connectionIssue+" · próbuję ponownie"));
         status.setTextColor(online?mint:Color.rgb(245,195,125));
     }
     private void send(String kind,String value) {
@@ -249,76 +248,52 @@ public class MainActivity extends Activity {
                         receipt=finalResponse.optString("message",finalResponse.optString("status"));
                     }
                     JSONObject fresh=snapshot.optJSONObject("state");
-                    if(fresh==null){online=false;receipt="Parowanie odrzucone";}else{
-                        state=fresh;online=true;lastSync=SystemClock.elapsedRealtime();
+                    if(fresh==null){online=false;connectionIssue="To nie jest zgodna sesja Live Explain";}else{
+                        state=fresh;online=true;connectionIssue="";lastSync=SystemClock.elapsedRealtime();
                         prefs.edit().putString("state",state.toString()).apply();render();
                     }
                     updateEnabled();
                 });
-            } catch(Exception e){ui.post(()->{if(current==generation && !isDestroyed()){busy=false;online=false;updateEnabled();}});}
+            } catch(Exception e){ui.post(()->{if(current==generation && !isDestroyed()){busy=false;online=false;connectionIssue="Laptop nie odpowiada: "+serverAddress+". Sprawdź Wi-Fi i zaporę laptopa.";updateEnabled();}});}
         });
     }
-    private void pairDialog() {
-        if (pairingDialog != null && pairingDialog.isShowing()) return;
-        LinearLayout box=column();box.setPadding(dp(20),dp(8),dp(20),dp(8));
-        add(box,text("Telefon udostępnia hotspot. Laptop łączy się z nim przez Wi-Fi. Kod znajdziesz w prywatnym pulpicie laptopa.",16,ink));
-        add(box,button("Znajdź prezentację w sieci ("+nearby.size()+")",()->{
-            if(nearby.isEmpty())new AlertDialog.Builder(this).setMessage("Szukam sesji w tej sieci Wi-Fi. Jeśli sieć blokuje wykrywanie, zeskanuj kod QR.").setPositiveButton("OK",null).show();
-            else new AlertDialog.Builder(this).setTitle("Sesje w tej sieci")
-                    .setItems(nearby.keySet().toArray(new String[0]),(d,w)->{
-                        android.net.nsd.NsdServiceInfo info=new ArrayList<>(nearby.values()).get(w);
-                        String pin=new String(info.getAttributes().get("pin"),java.nio.charset.StandardCharsets.US_ASCII);
-                        String moved=connection==null?null:connection.relocated(info.getHost().getHostAddress(),info.getPort(),pin);
-                        if(moved!=null)pair(moved);
-                        else new AlertDialog.Builder(this).setMessage("Znaleziono "+info.getServiceName()+". Zeskanuj prywatny kod na laptopie, aby zatwierdzić pierwsze połączenie.").setPositiveButton("OK",null).show();
-                    }).show();
-        }));
-        pairingInput=new EditText(this);pairingInput.setHint("Lub wklej link parowania");pairingInput.setTextColor(ink);pairingInput.setSingleLine(true);
-        pairingInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-        pairingInput.setText(pairingDraft);
-        add(box,button("Skanuj kod QR",()->{
-            pairingDraft=pairingInput.getText().toString();
-            pairingDialog.dismiss();
-            new IntentIntegrator(this).setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-                .setPrompt("Prywatny kod z Live Explain").setBeepEnabled(false).setOrientationLocked(false).initiateScan();
-        }));
-        if (pairingScanned) add(box,text("Kod wczytany. Wybierz Połącz, aby rozpocząć połączenie.",16,mint));
-        box.addView(pairingInput);
-        pairingDialog=new AlertDialog.Builder(this).setTitle("Połączenie z laptopem").setView(box)
-                .setNegativeButton("Zamknij",(d,w)->{pairingDraft=pairingInput.getText().toString();})
-                .setPositiveButton("Połącz",null).create();
-        pairingDialog.show();
-        pairingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            pairingDraft=pairingInput.getText().toString().trim();
-            try { new Connection(pairingDraft); }
-            catch(Exception invalid) {
-                pairingInput.setError("Wczytaj kod QR lub wklej pełny link parowania Live Explain.");
-                return;
-            }
-            pairingDialog.dismiss();
-            pair(pairingDraft);
-        });
-    }
-    private void pair(String uri) {
-        try {
-            Connection candidate=new Connection(uri);
-            if(!ledger.pending().isEmpty() && (connection==null || !candidate.pin.equals(connection.pin))) {
-                new AlertDialog.Builder(this).setMessage("Wynik polecenia w starej sesji pozostaje nieznany. Połączyć z nową sesją i porzucić stare potwierdzenie?")
-                        .setNegativeButton("Zostań",null).setPositiveButton("Nowa sesja",(d,w)->{
-                            try { ledger=new CommandLedger(""); prefs.edit().putString("pending","").commit(); pair(uri); }
-                            catch(Exception ignored) {}
-                        }).show();return;
-            }
-            connection=candidate;pairing=uri;generation++;busy=false;online=false;receipt="";
-            prefs.edit().putString("pairing",uri).apply();exchange(false);
-        }catch(Exception e){new AlertDialog.Builder(this).setMessage("Nieprawidłowy kod parowania. Zeskanuj kod z prywatnego pulpitu.").setPositiveButton("OK",null).show();}
-    }
-    protected void onActivityResult(int request,int result,Intent data) {
-        IntentResult scan=IntentIntegrator.parseActivityResult(request,result,data);
-        if(scan!=null){
-            if(scan.getContents()!=null){pairingDraft=scan.getContents();pairingScanned=true;}
-            pairDialog();
+    private void refreshServers() {
+        if(serverList==null || connectionDialog==null || !connectionDialog.isShowing())return;
+        serverList.removeAllViews();
+        if(nearby.isEmpty()) add(serverList,text("Szukam prezentacji w tej sieci… Możesz też wpisać adres laptopa poniżej.",16,ink));
+        for(android.net.nsd.NsdServiceInfo info:nearby.values()) {
+            String address="http://"+info.getHost().getHostAddress()+":"+info.getPort();
+            add(serverList,button(info.getServiceName()+"\n"+address,()->connect(address)));
         }
-        else super.onActivityResult(request,result,data);
+    }
+    private void showConnectionDialog() {
+        if(connectionDialog!=null && connectionDialog.isShowing())return;
+        LinearLayout box=column();box.setPadding(dp(20),dp(8),dp(20),dp(8));
+        add(box,text("Ta sama sieć Wi-Fi lub hotspot telefonu. Wybierz prezentację — bez kodu i parowania.",16,ink));
+        serverList=column();add(box,serverList);
+        add(box,button("Szukaj ponownie",()->{discovery.stop();discovery.start();refreshServers();}));
+        addressInput=new EditText(this);addressInput.setHint("Adres laptopa, np. 192.168.0.39");
+        addressInput.setTextColor(ink);addressInput.setSingleLine(true);
+        addressInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        addressInput.setText(addressDraft.isEmpty()?serverAddress:addressDraft);add(box,addressInput);
+        ScrollView scroll=new ScrollView(this);scroll.addView(box);
+        connectionDialog=new AlertDialog.Builder(this).setTitle("Prezentacje w sieci").setView(scroll)
+                .setNegativeButton("Zamknij",(d,w)->{addressDraft=addressInput.getText().toString();})
+                .setPositiveButton("Połącz z adresem",null).create();
+        connectionDialog.show();
+        connectionDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            addressDraft=addressInput.getText().toString().trim();connect(addressDraft);
+        });
+        refreshServers();
+    }
+    private void connect(String address) {
+        final Connection candidate;
+        try {candidate=new Connection(address);}
+        catch(Exception invalid) {if(addressInput!=null)addressInput.setError("Wpisz adres IPv4 laptopa, np. 192.168.0.39");return;}
+        connection=candidate;serverAddress=candidate.address;addressDraft=serverAddress;
+        generation++;busy=false;online=false;receipt="";connectionIssue="";freshPending="";
+        prefs.edit().putString("server",serverAddress).apply();
+        if(connectionDialog!=null)connectionDialog.dismiss();
+        updateEnabled();exchange(false);
     }
 }

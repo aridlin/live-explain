@@ -2,16 +2,14 @@ package pl.aridlin.liveexplain;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class ConnectionTest {
-    @Test public void discoveryCannotChangeTrustIdentity() throws Exception {
-        String pin="a".repeat(64);
-        Connection c=new Connection("liveexplain://pair?host=127.0.0.1&port=8765&pin="+pin+"&token="+"b".repeat(43));
-        assertNull(c.relocated("192.168.1.4",8765,"c".repeat(64)));
-        String uri=c.relocated("192.168.1.4",8765,pin);
-        assertNotNull(uri);assertEquals(pin,new Connection(uri).pin);
-        assertEquals(c.token,new Connection(uri).token);
+    @Test public void acceptsLocalAddressWithoutCode() {
+        Connection c=new Connection("192.168.0.39");
+        assertEquals("192.168.0.39",c.host);assertEquals(8080,c.port);
+        assertEquals("http://192.168.0.39:8080",c.address);
+        assertEquals(8766,new Connection("http://10.0.2.2:8766/").port);
     }
-    @Test public void rejectsWebLinksAndIncompletePairing() {
-        assertThrows(Exception.class,()->new Connection("https://example.com"));
-        assertThrows(Exception.class,()->new Connection("liveexplain://pair?host=127.0.0.1"));
+    @Test public void rejectsInvalidAddressesAndOldPairingLinks() {
+        for(String input:new String[]{"", "256.1.1.1", "1.2.3", "http://1.2.3.4:99999", "https://1.2.3.4", "http://u:p@1.2.3.4", "http://1.2.3.4/a", "liveexplain://pair?host=1.2.3.4"})
+            assertThrows(input,Exception.class,()->new Connection(input));
     }
 }

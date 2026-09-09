@@ -2,9 +2,9 @@
 
 A Python instrument for live technical explanation: three authored canonical narratives, controllable diagrams, explanatory detours, and a synchronized private script.
 
-**Status: complete authored Polish talk and native Android preview; physical room rehearsal remains required.** The fullscreen audience application has been launched and inspected on Hyprland. A native Android script reader and remote now connects locally through the phone hotspot, with private QR pairing and encrypted transport. See [Android setup](android/README.md).
+**Status: complete authored Polish talk and native Android preview; physical room rehearsal remains required.** The fullscreen audience application has been launched and inspected on Hyprland. A native Android script reader and remote now connects locally through the phone hotspot, with direct open HTTP access without pairing codes. See [Android setup](android/README.md).
 
-**[Download Android 0.2.2 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.2.2/live-explain-android-0.2.2-preview.apk)** · [Release history](https://github.com/aridlin/live-explain/releases)
+**[Download Android 0.3.0 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.3.0/live-explain-android-0.3.0-preview.apk)** · [Release history](https://github.com/aridlin/live-explain/releases)
 
 ![Cache timing specimen](tests/golden/normal-mid.png)
 
@@ -23,7 +23,7 @@ The audience opens fullscreen. HDMI is preferred when Qt exposes an HDMI-named s
 ./run --windowed --presenter
 ./run --canonical deep
 ./run --screen 1
-./run --remote  # private phone pairing before the talk
+./run --remote  # show the Wi-Fi connection address; server runs on port 8080
 ```
 
 After installation, `./run` uses the installed environment directly and works offline. Bundled DejaVu fonts are checked against a hash manifest and for Polish/technical glyph coverage before audience output opens.
@@ -75,7 +75,7 @@ The implementation uses ordinary Python records and functions:
 - `presentations/talk.py`, `talk_text.py`: all three full Polish routes, checkpoint landings, bridges and speaking material.
 - `presentations/spectre.py`: retained compact engineering specimen and shared educational events.
 - `presentations/spectre_scene.py`, `talk_scene.py`: persistent code/hex diagrams and authored full-talk compositions.
-- `protocol.py`, `remote.py`: authorized command acceptance, cancellation receipts, epoch/revision checks and local HTTPS pairing.
+- `protocol.py`, `remote.py`: local command acceptance, cancellation receipts, epoch/revision checks and open local HTTP access.
 - `android/`: native script reader and expandable remote control tray.
 
 The larger API in [PLAN.md](PLAN.md) remains a proposal. These implemented modules are the current authoring interface; do not copy the proposed example and expect it to run unchanged.

@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 public class PresenterFlowTest {
     private final Instrumentation inst=InstrumentationRegistry.getInstrumentation();
     private MainActivity activity;
+    private double interruptedPosition;
     private Object field(String name) throws Exception { Field f=MainActivity.class.getDeclaredField(name);f.setAccessible(true);return f.get(activity); }
     private void click(String fragment) {
         inst.runOnMainSync(()->{
@@ -48,27 +49,40 @@ public class PresenterFlowTest {
     }
     @Test public void readerControlsDetourAndExactReturn() throws Exception {
         Context context=inst.getTargetContext();
-        String pairing;
-        try(InputStream in=context.openFileInput("pairing-test.txt")){pairing=new String(in.readAllBytes(),StandardCharsets.UTF_8).trim();}
-        context.getSharedPreferences("presenter",0).edit().clear().putString("pairing",pairing).commit();
+        String serverAddress;
+        try(InputStream in=context.openFileInput("server-test.txt")){serverAddress=new String(in.readAllBytes(),StandardCharsets.UTF_8).trim();}
+        context.getSharedPreferences("presenter",0).edit().clear().commit();
         activity=(MainActivity)inst.startActivitySync(new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         try {
+            inst.runOnMainSync(()->{
+                try {
+                    android.app.AlertDialog dialog=(android.app.AlertDialog)field("connectionDialog");
+                    assertTrue(dialog.isShowing());
+                    EditText input=(EditText)field("addressInput");
+                    input.setText(serverAddress);
+                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();
+                    assertFalse(dialog.isShowing());
+                }catch(Exception e){throw new RuntimeException(e);}
+            });
             waitReady();screenshot("reader.png");
             click("Dalej");Thread.sleep(2700);waitReady();
             click("Sterowanie i ścieżki");
             click("Dokończ ruch");Thread.sleep(1000);waitReady();screenshot("tray.png");
             inst.runOnMainSync(()->{
                 try { org.json.JSONObject state=(org.json.JSONObject)field("state");
+                    interruptedPosition=state.getDouble("position");
+                    assertFalse(state.getBoolean("playing"));
                     org.json.JSONObject branch=state.getJSONArray("branches").getJSONObject(0);
                     TextView button=find(activity.getWindow().getDecorView(),branch.getString("title"));assertNotNull(button);button.performClick();
                 } catch(Exception e){throw new RuntimeException(e);}
             });
             Thread.sleep(1000);waitReady();
             inst.runOnMainSync(()->{try{assertEquals("shared.location",((org.json.JSONObject)field("state")).getString("beat"));}catch(Exception e){throw new RuntimeException(e);}});
+            click("Dokończ ruch");Thread.sleep(1000);waitReady();
             click("Wróć do przerwanego");Thread.sleep(1000);waitReady();
             inst.runOnMainSync(()->{try{
                 org.json.JSONObject state=(org.json.JSONObject)field("state");
-                assertEquals("normal.timing",state.getString("beat"));assertEquals(2,state.getDouble("position"),.001);assertFalse(state.getBoolean("playing"));
+                assertEquals("normal.timing",state.getString("beat"));assertEquals(interruptedPosition,state.getDouble("position"),.001);assertFalse(state.getBoolean("playing"));
             }catch(Exception e){throw new RuntimeException(e);}});
             click("Zasłoń publiczny");Thread.sleep(700);waitReady();
             click("Pokaż publiczny");Thread.sleep(700);waitReady();

@@ -292,7 +292,15 @@ class SpectreScene(QGraphicsScene):
         text(p, (64, 183, 1472, 44), self.session.beat.subtitle, 25, MUTED)
         p.setPen(QPen(QColor("#d7dfda"), 1.5))
         p.drawLine(QPointF(64, 240), QPointF(1536, 240))
-        text(p, (64, 839, 1472, 28), "MODEL POGLĄDOWY  •  Czasy umowne, nie pomiar sprzętu", 17, MUTED)
+        text(
+            p,
+            (64, 839, 1472, 28),
+            "INFORMACJA POŚREDNIA  •  Historyczna relacja: TIME, 13.08.1990"
+            if self.session.beat.diagram.get("phase") == "opening"
+            else "MODEL POGLĄDOWY  •  Czasy umowne, nie pomiar sprzętu",
+            17,
+            MUTED,
+        )
 
     def drawForeground(self, p, rect):
         if self.blank:

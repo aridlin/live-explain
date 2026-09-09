@@ -24,28 +24,42 @@ class Chapter:
 CHAPTERS = (
     Chapter(
         id="opening",
-        title="Odrzucone nie znaczy niewidoczne.",
-        subtitle="Spectre i Meltdown: co może zdradzić sam sposób wykonania programu?",
-        seconds=55,
-        cue="Dwa pytania: jaki jest wynik i jaki zostaje ślad?",
-        simple="""Chcę pokazać wam dwie rzeczy, które łatwo pomylić. Pierwsza: co program oficjalnie zrobił. Druga: co zmieniło się w komputerze podczas jego pracy. Wynik może być prawidłowy, a sposób dojścia do niego może zdradzać informację.
+        title="Co pizza zdradza o Pentagonie?",
+        subtitle="Nie znasz treści spotkania. Możesz zauważyć ślad aktywności.",
+        seconds=105,
+        cue="0:00–0:25 historia; 0:25–0:55 obserwacja; 0:55–1:20 hipoteza; do 1:45 przejście do komputera.",
+        simple="""Zacznijmy od pizzy. Pentagon to siedziba amerykańskiego Departamentu Obrony. Wyobraźcie sobie, że nie możecie zajrzeć do środka ani posłuchać rozmów. Widzicie natomiast, że późnym wieczorem zamawia się więcej jedzenia. Czy to może coś sugerować?
 
-Na ekranie będziemy obserwować oba te poziomy. Zaczniemy od kilku pól pamięci. Potem zobaczymy pracę wykonaną na próbę, której wynik zostanie odrzucony. Pytanie brzmi: czy razem z wynikiem znika każdy ślad?
+[Zatrzymaj się na jedną lub dwie odpowiedzi.]
 
-Nie trzeba znać programowania. Każdy potrzebny zapis przeczytamy. To przygotowany model, więc możemy go zatrzymać i wrócić do dowolnego ruchu. Nie próbujemy włamać się do tego laptopa.""",
-        normal="""Czy program może odmówić pokazania sekretu, a mimo to coś o nim zdradzić? Nie przez komunikat na ekranie i nie przez wysłanie pliku, tylko przez to, jak długo trwa pewna operacja. To będzie punkt wyjścia do Spectre i Meltdown.
+Może więcej osób zostało po godzinach. Nie wiemy jednak, nad czym pracują. Może trwa ważne spotkanie, ale może chodzić o ćwiczenia albo zwykłe nadgodziny. Samo zamówienie nie jest treścią narady.
 
-Będziemy śledzić dwie rzeczy oddzielnie: oficjalny wynik programu oraz ślad wykonania w komputerze. Przez większość czasu obie rzeczy pasują do naszej intuicji. Ciekawie robi się wtedy, kiedy procesor wykona trochę pracy na próbę, a później odrzuci jej wynik. Odrzucenie wyniku nie musi wymazać wszystkich skutków tej pracy.
+Ta historia ma rzeczywisty punkt zaczepienia: w 1990 roku TIME opisywał dostawców pizzy, którzy wiązali wzrost zamówień z ważnymi wydarzeniami w Waszyngtonie. To ich relacja, nie niezawodny wykrywacz wojny. Nasza animacja jest schematem, a nie zapisem konkretnych dostaw.
 
-Zaczniemy od bajtu, adresu i pamięci podręcznej. Potem złożymy z nich mechanizm wycieku. Kod na ekranie jest krótkim zapisem działań, które przeczytamy wspólnie; nie zakładam znajomości języka programowania. To model poglądowy z umownymi czasami. Dzięki temu każdą część można zatrzymać, a wynik nie zależy od podatności tego laptopa.""",
-        deep="""Punktem wyjścia jest różnica między poprawnością funkcjonalną a poufnością informacji. Procesor może zachować wynik wymagany przez program, a jednocześnie pozostawić mierzalne różnice w swoim stanie wewnętrznym. Obserwator nie musi dostać sekretu jako oficjalnego wyniku, żeby czegoś się o nim dowiedzieć.
+Zapamiętajmy różnicę: obserwujemy zamówienia, a o pracy w budynku tylko wnioskujemy. W komputerze też można patrzeć na ślad działania zamiast na samą chronioną informację. Naszym śladem będzie czas odczytu pamięci. Pizza wyjaśnia pomysł obserwacji pośredniej; działanie procesora za chwilę pokażemy już wprost.""",
+        normal="""Czy można dowiedzieć się czegoś o pracy Pentagonu, nie czytając żadnego dokumentu? Pentagon to siedziba amerykańskiego Departamentu Obrony. Wyobraźcie sobie późny wieczór i nietypowo dużo zamówień na pizzę. Co mogłoby to sugerować?
 
-Rozdzielimy stan architektoniczny, czyli to, co ma być widoczne zgodnie z modelem wykonywania instrukcji, od efektów mikroarchitektonicznych, takich jak obecność danych w cache. Te nazwy będą skrótami dla rzeczy, które pokażemy na diagramie, a nie warunkiem udziału w rozmowie.
+[Odsłoń zamówienia. Daj grupie chwilę na odpowiedź.]
 
-Przejdziemy przez czas odczytu, kodowanie wartości w śladzie oraz pracę przejściową. Spectre omówimy na przykładzie wariantu pierwszego, z warunkiem zakresu. Oryginalny Meltdown dostanie osobny mechanizm: dostęp naruszający uprawnienia. Nie zrobimy z obu jednej historii o źle przewidzianym ifie. Wszystkie pomiary będą symulowane; model nie opisuje dokładnego potoku konkretnego procesora.""",
-        next_sentence="Najpierw ustalmy, przed czym komputer ma chronić dane.",
-        boundary="Opowiadamy o Spectre v1 i oryginalnym Meltdown. Nie o każdym ataku przejściowego wykonania.",
-        question="Czy odmowa pokazania danych wystarcza, jeśli można jeszcze obserwować czas? Na razie zostaw to pytanie otwarte.",
+Jedna hipoteza brzmi: więcej ludzi pracuje po godzinach. Być może trwa ważne spotkanie. Ale nadal nie znamy jego treści, decyzji ani nawet powodu dodatkowej pracy.
+
+To nie jest historia wymyślona tylko do tej prezentacji. TIME w 1990 roku opisywał dostawców, którzy łączyli wzrost zamówień z ważnymi wydarzeniami w Waszyngtonie. Traktujemy to jako relację o możliwym wskaźniku, nie jako dowód, że pizza pozwala przewidzieć wojnę. Na ekranie nie ma rzeczywistych danych o zamówieniach.
+
+Najważniejsze jest połączenie: ukryta aktywność może zmienić coś widocznego na zewnątrz. Obserwacja wspiera wtedy hipotezę, chociaż nie daje bezpośredniego dostępu do sekretu. Związek może też zawieść: ćwiczenia, zwykłe nadgodziny albo inna przyczyna mogą dać podobny ślad.
+
+Właśnie od takiego pomysłu zaczniemy kanały boczne w komputerze. Program może nie oddać chronionej wartości, ale czas pewnej operacji może zależeć od wcześniejszej pracy. Zamiast dostaw pizzy będziemy mierzyć odczyt pamięci. A zamiast próbować zgadnąć wszystko z jednej obserwacji, rozrysujemy dokładny łańcuch zależności.""",
+        deep="""Zacznijmy od Pentagonu i zamówień na pizzę. Nie obserwujemy treści narady. Możemy natomiast rozważyć zewnętrzny wskaźnik aktywności: nietypowo dużo zamówień późnym wieczorem. Jak mocny wniosek wolno z tego wyciągnąć?
+
+[Oddziel odpowiedzi o obserwacji od odpowiedzi o jej możliwej przyczynie.]
+
+Już w 1990 roku TIME opisywał relacje dostawców łączących wzrost zamówień z ważnymi wydarzeniami w Waszyngtonie. To historyczna relacja o wskaźniku, a nie zweryfikowany model przewidywania operacji wojskowych. Nie zakładamy również, że dowolny wykres popularności restauracji pokazuje rzeczywiste dostawy do konkretnego budynku.
+
+Rozdzielmy trzy poziomy. Pierwszy: obserwacja zamówień. Drugi: hipoteza o zwiększonej pracy po godzinach. Trzeci: szczegółowa treść tej pracy, której nadal nie znamy. Ćwiczenia, rutynowe nadgodziny i inne przyczyny mogą prowadzić do podobnego wyniku. Sama korelacja nie ustala jednoznacznie przyczyny ani planu.
+
+Przykład pomaga uchwycić ideę kanału bocznego: stan, którego nie odczytujemy bezpośrednio, wpływa na inny, obserwowalny sygnał. W dalszej części nie będziemy jednak udawać, że pizza wyjaśnia mechanizm CPU. Pokażemy konkretną zależność od wartości, przez wybór adresu i stan cache, do czasu odczytu. Dopiero potem dołączymy pracę przejściową i oddzielimy Spectre v1 od oryginalnego Meltdown. Wszystkie komputerowe czasy będą symulowane.""",
+        next_sentence="Przenieśmy teraz pytanie do komputera: co powinno pozostać niedostępne dla programu?",
+        boundary="Historyczna relacja: TIME, 13.08.1990. Zamówienia są możliwym wskaźnikiem, nie dowodem treści narady ani prognozą wojny. Ruch jest ilustracją, nie danymi pomiarowymi.",
+        question="Co naprawdę obserwujemy, a co dopiero dopowiadamy jako hipotezę?",
     ),
     Chapter(
         id="isolation",

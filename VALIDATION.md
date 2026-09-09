@@ -2,7 +2,35 @@
 
 The complete authored talk is implemented. This record separates software checks from the remaining physical-phone, projector and spoken-rehearsal gates. It does not claim every long-term engine feature is complete.
 
-## Verified
+## Current connection mode (Android 0.3.0)
+
+At the user's request, QR/token/certificate pairing was removed. The desktop now starts
+an open HTTP server on port 8080 by default, and Android connects through live DNS-SD
+selection or a plain IPv4 address. Multiple controllers may read/control the same session;
+per-controller command receipts and revision/epoch checks remain. Camera/ZXing, QR image
+creation and TLS dependencies were removed. Earlier TLS/scanner validation below is
+historical and does not describe the current connection mode.
+
+The target laptop's saved UFW configuration enables default-deny input, permits TCP 8080
+and mDNS, but did not permit the old port 8765. Port 8080 was checked free before adoption.
+No firewall rules were changed. Physical phone routing remains an independent check.
+
+Current checks (2026-09-09): all 82 Python tests passed, including real HTTP
+multi-controller/receipt tests and full-talk typography checks. Eight Android JVM tests,
+APK assembly and lint passed. A native Android API 35 emulator connected through the
+actual address-entry dialog over HTTP, synchronized the reader, advanced, entered the
+cache-location detour, returned to the captured paused position, and blanked/unblanked
+the audience screen. The test compares the saved origin position, because an explicit
+finish after a completed segment can select the next hold. This is emulator evidence,
+not a physical hotspot-phone test.
+
+The opening now allocates 105 seconds to Pentagon pizza activity, with separately
+authored Polish scripts in all three canonicals. The rendered opening was visually
+inspected and full-talk layout checks passed. Its historical source and inference limits
+are documented in PRESENTATION.md. Fallback stills were regenerated through the same
+renderer. The 20-minute allocation remains an authored budget pending spoken rehearsal.
+
+## Earlier validation
 
 - The full suite now includes 82 Python checks: all 48 canonical beats plus detours/bridges, Polish typography and rendering at every authored hold, audience disclosure, interrupted pixel restoration and matching-checkpoint depth changes, alongside the existing runtime, geometry and protocol tests.
 - Eight Android JVM tests passed. Android lint passed with warnings (pinned dependency versions, deliberately durable command receipts, custom session-certificate pinning, and Polish-only string composition).
@@ -37,8 +65,8 @@ Offscreen Normal scene rendering over 120 frames measured about 10.6 ms median /
 
 - HDMI projector mode changes, hotplug behavior, mixed-refresh outputs and actual room/back-row readability. HDMI was disconnected during the observed checks.
 - Zero-frame privacy during OS mirroring: no application can guarantee this. Notes remain opt-in; known screen changes hide private UI and cover the audience scene.
-- A timed, spoken 20-minute rehearsal. All three full-length narratives are authored; their planned 16:15 core leaves approximately 3:45 for detours and discussion. This is a budget, not a measured speaking duration.
-- Physical Android phone/hotspot compatibility, camera QR scanning on a real device, prolonged radio-loss rehearsal, and touch-to-projector latency. The native preview uses HTTPS polling rather than WebSockets; its emulator test does not prove vendor hotspot routing.
+- A timed, spoken 20-minute rehearsal. All three full-length narratives are authored; their planned 17:05 core leaves approximately 2:55 for detours and discussion. This is a budget, not a measured speaking duration.
+- Physical Android phone/hotspot compatibility, prolonged radio-loss rehearsal, and touch-to-projector latency. The native preview uses HTTP polling rather than WebSockets; its emulator test does not prove vendor hotspot routing.
 - Large-dataset virtualization, a graphical authoring editor, rich arbitrary code editing, a general graph router, and real hardware measurements.
 - A fully standalone platform installer containing Python and Qt, or testing on unrelated operating systems. The supported launch path uses the isolated locked environment; the wheel contains the application and fonts.
 - Input-to-visible-freeze timing with a high-speed camera and long-session resource soak testing.

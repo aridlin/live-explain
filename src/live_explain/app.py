@@ -140,7 +140,7 @@ class Presenter(QMainWindow):
         blank.clicked.connect(lambda: send("blank"))
         output_row.addWidget(blank)
         pair = QPushButton("Połącz telefon")
-        pair.clicked.connect(lambda: send("pair"))
+        pair.clicked.connect(lambda: send("connect"))
         output_row.addWidget(pair)
         layout.addLayout(output_row)
         self.status = QLabel()
@@ -230,7 +230,7 @@ class Instrument:
         self.audience = Audience(self.scene)
         self.presenter = Presenter(self.session, self.send, self.audience)
         self.remote = None
-        self.pair_dialog = None
+        self.connection_dialog = None
         self.recovery = Path.home() / ".local/state/live-explain/recovery.json"
         if args.beat:
             if args.beat not in self.session.presentation.routes[args.canonical]:
@@ -290,8 +290,8 @@ class Instrument:
         self.scene.transition = None
         self.scene.blank = True
         self.presenter.hide()
-        if self.pair_dialog:
-            self.pair_dialog.hide()
+        if self.connection_dialog:
+            self.connection_dialog.hide()
         self.presenter.refresh_screens()
         self.scene.refresh()
         self.session.status = "Wyjście zmieniło się. Wybierz ekran w telefonie albo w prywatnym pulpicie (P)."
@@ -308,14 +308,14 @@ class Instrument:
         return state
 
     def send(self, kind, value=None):
-        if kind == "pair":
+        if kind == "connect":
             from .remote import RemoteServer
 
             try:
                 if self.remote is None:
                     self.remote = RemoteServer(self)
                     self.app.aboutToQuit.connect(self.remote.close)
-                self.pair_dialog = self.remote.pairing_dialog(self.presenter)
+                self.connection_dialog = self.remote.connection_dialog(self.presenter)
             except OSError as error:
                 self.session.status = f"Nie udało się uruchomić połączenia: {error}"
             return True, self.session.status
@@ -387,8 +387,8 @@ class Instrument:
         return accepted, message
 
     def tick(self):
-        if self.remote and self.remote.host.controller and self.pair_dialog:
-            self.pair_dialog.hide()
+        if self.remote and self.remote.host.controller and self.connection_dialog:
+            self.connection_dialog.hide()
         now = time.monotonic()
         delta = now - self.previous
         self.previous = now
@@ -419,7 +419,7 @@ def capture(scene, path, width=1600, height=900):
 def main():
     parser = argparse.ArgumentParser(description="Live Explain — live presentation instrument")
     parser.add_argument("--slice", action="store_true", help="Use the compact engineering rehearsal")
-    parser.add_argument("--remote", action="store_true", help="Open private phone pairing before the talk")
+    parser.add_argument("--remote", action="store_true", help="Show the local Wi-Fi connection address")
     parser.add_argument("--windowed", action="store_true")
     parser.add_argument(
         "--presenter", action="store_true", help="Show private notes (rehearsal only on a single screen)"
@@ -535,8 +535,9 @@ def main():
     instrument.presenter.windowHandle().setScreen(laptop)
     if args.presenter:
         instrument.presenter.show()
-    if args.remote:
-        instrument.send("pair")
+    instrument.send("connect")
+    if not args.remote and instrument.connection_dialog:
+        instrument.connection_dialog.hide()
     return app.exec()
 
 

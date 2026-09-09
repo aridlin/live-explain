@@ -1,4 +1,4 @@
-"""Public mDNS locator. Never publishes the private pairing token or script."""
+"""Public mDNS locator for open local HTTP sessions."""
 
 import socket
 from concurrent.futures import ThreadPoolExecutor
@@ -9,20 +9,20 @@ from zeroconf import IPVersion, ServiceInfo, Zeroconf
 SERVICE_TYPE = "_liveexplain._tcp.local."
 
 
-def advertisement(epoch, pin, port, addresses):
+def advertisement(epoch, port, addresses):
     return ServiceInfo(
         SERVICE_TYPE,
         f"Live Explain {epoch[:6]}.{SERVICE_TYPE}",
         addresses=[socket.inet_aton(ip) for ip in addresses],
         port=port,
-        properties={"version": "1", "pin": pin},
+        properties={"version": "2", "transport": "http", "epoch": epoch},
         server=f"live-explain-{epoch[:8]}.local.",
     )
 
 
 class Discovery:
-    def __init__(self, epoch, pin, port):
-        self.epoch, self.pin, self.port = epoch, pin, port
+    def __init__(self, epoch, port):
+        self.epoch, self.port = epoch, port
         self.zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
         self.info = None
         self.worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="live-discovery")
@@ -38,7 +38,8 @@ class Discovery:
                 {
                     entry.ip().toString()
                     for interface in QNetworkInterface.allInterfaces()
-                    if interface.type()
+                    if interface.flags() & QNetworkInterface.InterfaceFlag.IsRunning
+                    and interface.type()
                     in (QNetworkInterface.InterfaceType.Wifi, QNetworkInterface.InterfaceType.Ethernet)
                     for entry in interface.addressEntries()
                     if ":" not in entry.ip().toString() and not entry.ip().toString().startswith("127.")
@@ -55,7 +56,7 @@ class Discovery:
             self.zeroconf.unregister_service(self.info)
             self.info = None
         if addresses:
-            self.info = advertisement(self.epoch, self.pin, self.port, addresses)
+            self.info = advertisement(self.epoch, self.port, addresses)
             self.zeroconf.register_service(self.info)
 
     def close(self):

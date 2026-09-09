@@ -7,9 +7,9 @@ import android.os.Looper;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-/** Android DNS-SD locates sessions. Advertisements never grant trust or control. */
+/** Android DNS-SD locates sessions. Sessions accept local app connections without pairing. */
 final class Discovery {
-    interface Listener { void found(NsdServiceInfo info, String pin); }
+    interface Listener { void found(NsdServiceInfo info, String epoch); }
     private final NsdManager manager;
     private final Listener listener;
     private final Handler ui=new Handler(Looper.getMainLooper());
@@ -33,10 +33,11 @@ final class Discovery {
                         public void onResolveFailed(NsdServiceInfo item,int error) {ui.post(()->resolving.remove(item.getServiceName()));}
                         public void onServiceResolved(NsdServiceInfo item) {ui.post(()->{
                             resolving.remove(item.getServiceName());
-                            byte[] raw=item.getAttributes().get("pin");
-                            if(active!=null && raw!=null && item.getHost()!=null) {
-                                String pin=new String(raw,StandardCharsets.US_ASCII);
-                                if(pin.matches("[0-9a-f]{64}"))listener.found(item,pin);
+                            byte[] raw=item.getAttributes().get("epoch");
+                            byte[] transport=item.getAttributes().get("transport");
+                            if(active!=null && raw!=null && transport!=null && "http".equals(new String(transport,StandardCharsets.US_ASCII)) && item.getHost() instanceof java.net.Inet4Address) {
+                                String epoch=new String(raw,StandardCharsets.US_ASCII);
+                                if(epoch.matches("[0-9a-f]{32}"))listener.found(item,epoch);
                             }
                         });}
                     }); } catch(RuntimeException e){resolving.remove(info.getServiceName());}

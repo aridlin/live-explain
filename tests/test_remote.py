@@ -1,8 +1,7 @@
-"""Exercise real HTTPS plus GUI-thread dispatch, including uncertain command resolution."""
+"""Exercise real HTTP plus GUI-thread dispatch, including uncertain command resolution."""
 
 import http.client
 import json
-import ssl
 import threading
 import time
 from types import SimpleNamespace
@@ -25,9 +24,9 @@ def envelope(session, identity="tap", kind="advance", value=None):
 def test_resolve_unknown_reserves_cancellation_against_late_delivery(session):
     host = CommandHost(session)
     raw = envelope(session)
-    receipt = host.handle(raw, host.token, resolve=True)
+    receipt = host.handle(raw, resolve=True)
     assert receipt["status"] == "rejected"
-    assert host.handle(raw, host.token) == receipt
+    assert host.handle(raw) == receipt
     assert not session.state.playback.playing
     assert not session.recording
 
@@ -35,8 +34,8 @@ def test_resolve_unknown_reserves_cancellation_against_late_delivery(session):
 def test_resolve_known_returns_original_receipt(session):
     host = CommandHost(session)
     raw = envelope(session)
-    receipt = host.handle(raw, host.token)
-    assert host.handle(raw, host.token, resolve=True) == receipt
+    receipt = host.handle(raw)
+    assert host.handle(raw, resolve=True) == receipt
     assert len(session.recording) == 1
 
 
@@ -86,25 +85,23 @@ def test_remote_dispatch_controls_composition_and_blank(app, tmp_path):
     instrument.recovery = tmp_path / "recovery.json"
     host = CommandHost(instrument.session, instrument.send, instrument.remote_state)
     try:
-        response = host.handle(envelope(instrument.session, "detour", "detour", "cache-location"), host.token)
+        response = host.handle(envelope(instrument.session, "detour", "detour", "cache-location"))
         assert response["status"] == "accepted" and response["state"]["transitioning"]
-        assert host.handle(envelope(instrument.session, "pause", "pause"), host.token)["status"] == "accepted"
+        assert host.handle(envelope(instrument.session, "pause", "pause"))["status"] == "accepted"
         assert instrument.scene.transition.paused
-        assert (
-            host.handle(envelope(instrument.session, "finish", "finish"), host.token)["status"] == "accepted"
-        )
+        assert host.handle(envelope(instrument.session, "finish", "finish"))["status"] == "accepted"
         assert not instrument.scene.transition.active
         raw = envelope(instrument.session, "blank", "blank", "on")
-        first = host.handle(raw, host.token)
+        first = host.handle(raw)
         assert first["state"]["blank"]
-        assert host.handle(raw, host.token) == first
+        assert host.handle(raw) == first
         assert instrument.scene.blank
     finally:
         instrument.audience.close()
         instrument.presenter.close()
 
 
-def test_https_authentication_resolution_and_gui_ownership(app, session):
+def test_http_open_access_resolution_and_gui_ownership(app, session):
     gui_thread = threading.get_ident()
 
     def dispatch(kind, value):
@@ -120,21 +117,9 @@ def test_https_authentication_resolution_and_gui_ownership(app, session):
     raw = envelope(session)
 
     def client():
-        # Test client deliberately uses a private context, then checks the actual certificate pin.
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-
-        def request(path, body=None, token=None):
-            import hashlib
-
-            c = http.client.HTTPSConnection("127.0.0.1", server.port, context=context, timeout=5)
-            c.connect()
-            assert hashlib.sha256(c.sock.getpeercert(binary_form=True)).hexdigest() == server.fingerprint
-            headers = {
-                "Authorization": "Bearer " + (token or server.host.token),
-                "X-Controller": "test-phone",
-            }
+        def request(path, body=None, controller="test-phone"):
+            c = http.client.HTTPConnection("127.0.0.1", server.port, timeout=5)
+            headers = {"X-Controller": controller}
             c.request("GET" if body is None else "POST", path, body, headers)
             response = c.getresponse()
             status, data = response.status, response.read()
@@ -142,7 +127,7 @@ def test_https_authentication_resolution_and_gui_ownership(app, session):
             return status, json.loads(data) if status == 200 else None
 
         try:
-            results.append(request("/state", token="bad")[0])
+            results.append(request("/state", controller="another-phone")[0])
             results.append(request("/state")[1])
             results.append(request("/command", raw)[1])
             results.append(request("/resolve", raw)[1])
@@ -159,20 +144,20 @@ def test_https_authentication_resolution_and_gui_ownership(app, session):
     worker.join(timeout=0.1)
     server.close()
     assert not worker.is_alive() and not errors
-    assert results[0] == 401
+    assert results[0] == 200
     assert results[1]["state"]["script"]["wording"]
     assert results[2] == results[3]
     assert results[4]["state"]["playing"]
     assert len(session.recording) == 1
 
 
-def test_discovery_exposes_only_locator_and_public_pin():
+def test_discovery_exposes_open_http_locator():
     from live_explain.discovery import advertisement
 
-    info = advertisement("session-id", "a" * 64, 8765, ["192.168.1.4"])
+    info = advertisement("session-id", 8765, ["192.168.1.4"])
     assert info.port == 8765
     assert info.parsed_addresses() == ["192.168.1.4"]
-    assert set(info.properties) == {b"pin", b"version"}
+    assert set(info.properties) == {b"transport", b"version", b"epoch"}
     assert b"token" not in info.properties
 
 
@@ -197,7 +182,7 @@ def test_discovery_publication_and_shutdown_run_off_gui_thread(app, monkeypatch)
 
     monkeypatch.setattr(discovery, "Zeroconf", FakeZeroconf)
     monkeypatch.setattr(discovery.QNetworkInterface, "allInterfaces", lambda: [])
-    instance = discovery.Discovery("session", "a" * 64, 8765)
+    instance = discovery.Discovery("session", 8765)
     instance.worker.submit(instance.publish, ("192.168.1.4",)).result(timeout=2)
     instance.close()
     assert [kind for kind, _ in calls] == ["register", "unregister", "close"]

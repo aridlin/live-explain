@@ -1,7 +1,8 @@
 """Art-directed live compositions for the full talk; no independent rendering engine."""
 
-from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QColor, QPen
+from math import cos, sin, pi
+from PySide6.QtCore import QRectF, QPointF, Qt
+from PySide6.QtGui import QColor, QPen, QPolygonF
 from PySide6.QtWidgets import QGraphicsObject
 from ..components import Card, Connector, DataToken, text, BLUE, TEAL, AMBER, MUTED, INK
 from ..geometry import Box, Point, Route, smooth
@@ -108,23 +109,38 @@ class StoryView:
         left, right = Box(64, 300, 700, 270), Box(836, 300, 700, 270)
         foot = Box(64, 675, 1472, 135)
         if phase == "opening":
-            self.card("result", "OFICJALNY WYNIK", "Program nie oddaje sekretu.", left)
+            building, orders = Box(64, 305, 480, 315), Box(944, 305, 592, 315)
+            self.card("result", "WNĘTRZE PENTAGONU", "", building)
             self.card(
                 "trace",
-                "OSOBNA OBSERWACJA",
-                "Czas może zależeć od wcześniejszej pracy.",
-                right,
+                "OBSERWACJA Z ZEWNĄTRZ",
+                "Więcej zamówień późnym wieczorem" if model["pizza_busy"] else "Zamówienia na pizzę",
+                orders,
                 TEAL,
                 smooth(p / 0.65),
             )
+            route = self.connect(
+                0,
+                building.port("right"),
+                orders.port("left"),
+                p,
+                dashed=True,
+                waypoints=(Point(640, 462.5), Point(685, 405), Point(800, 405), Point(845, 462.5)),
+            )
+            self.travel(0, route, "pizza", p, 0, 2)
+            self.travel(1, route, "pizza", p, 2, 4)
             self.card(
                 "note",
-                "PYTANIE",
-                "Czy odmowa wyniku oznacza brak informacji?",
+                "DALEJ: KOMPUTER" if p >= 6 else "HIPOTEZA" if p >= 4 else "PYTANIE",
+                "Czas odczytu pamięci też może być obserwowalnym śladem."
+                if p >= 6
+                else "Więcej pracy po godzinach? Treść i powód nadal pozostają nieznane."
+                if p >= 4
+                else "Co można z tego wywnioskować?",
                 foot,
                 AMBER,
-                smooth((p - 2) / 0.65),
             )
+            self.caption = "Schemat możliwej zależności. To nie są dane o rzeczywistych dostawach."
         elif phase in {"isolation", "bounds"}:
             self.card(
                 "victim",
@@ -404,5 +420,19 @@ class StoryView:
             raise ValueError(f"Unknown authored composition {phase}")
 
     def foreground(self, painter):
+        if self.phase == "opening":
+            painter.setPen(QPen(QColor(BLUE), 3))
+            painter.setBrush(QColor("#edf3f5"))
+            polygon = QPolygonF(
+                [
+                    QPointF(
+                        304 + 82 * cos(-pi / 2 + i * 2 * pi / 5), 444 + 82 * sin(-pi / 2 + i * 2 * pi / 5)
+                    )
+                    for i in range(5)
+                ]
+            )
+            painter.drawPolygon(polygon)
+            text(painter, (260, 424, 88, 40), "?", 32, BLUE, True)
+            text(painter, (88, 555, 432, 40), "Treść spotkań: nieznana", 25, INK)
         if self.caption:
             text(painter, (64, 245, 1472, 38), self.caption, 20, MUTED)

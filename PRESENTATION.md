@@ -1,7 +1,7 @@
 # Spectre i Meltdown — prowadzenie około 20 minut
 
-`./run --remote` starts the full Normal narrative and the private phone pairing window.
-The phone is the primary script reader and controller. Pair and rehearse before leaving
+`./run --remote` starts the full Normal narrative and the local Wi-Fi address window.
+The phone is the primary script reader and controller. Connect and rehearse before leaving
 the laptop. `./run --slice` retains the compact engineering specimen.
 
 The audience-facing explanation and full wording are Polish. The three private routes
@@ -12,7 +12,7 @@ limits. Depth labels are not projected. None of the routes is an assessment of a
 
 ## Pacing
 
-The authored core budget is **16:15**, leaving about **3:45** for questions, pauses and
+The authored core budget is **17:05**, leaving about **2:55** for questions, pauses and
 one or two short detours. Normal has approximately 2,300 words before optional questions.
 This is a rehearsal budget, not a claim that reading every optional answer fits 20 minutes.
 The presenter controls every segment. Animations stop at meaningful holds; there is no
@@ -21,7 +21,7 @@ when needed. Do not ask every prepared question: they are opportunities, not a q
 
 | Chapter | Purpose | Core budget |
 |---|---|---:|
-| Opening | Official result versus observable trace | 0:55 |
+| Opening | Pentagon pizza: observable activity versus a hypothesis | 1:45 |
 | Isolation | Program rule versus hardware access permission | 0:55 |
 | Bytes | Address 4, public value 7; read the code together | 1:00 |
 | Cache | Useful copies; where cache is, or line granularity in Deep | 0:50 |
@@ -96,7 +96,7 @@ or claim about the particular laptop's vulnerability.
 
 ## Before the room
 
-1. Install the corrected Android APK, pair, grant camera permission, and test scan/return.
+1. Install the corrected Android APK, select the discovered desktop (or enter its IP), and test connection/return.
 2. Test the real hotspot or LAN, discovery, disconnect/reconnect, pause, return and blanking.
 3. Connect HDMI; verify output recovery from the phone, then check readability from the back.
 4. Speak the Normal route aloud with a timer. Take one cache detour and one depth change.
@@ -106,3 +106,18 @@ or claim about the particular laptop's vulnerability.
 
 The exported stills use the live renderer. They preserve the teaching sequence but lose
 animation and interactive branching. They are a rehearsable failure fallback, not a second engine.
+
+## Pentagon pizza opening
+
+All three routes begin with a 105-second opening: Pentagon → visible pizza activity →
+a hypothesis about overtime → observable computer effects. The presenter pauses for
+answers before distinguishing observation from inference. The vectors and travelling
+pizza tokens are illustrative; no historical order counts or restaurant-traffic data
+are fabricated. The example introduces indirect information, not a CPU mechanism.
+
+Historical anchor: Paul Gray, [“And Bomb The Anchovies,” TIME, 13 August 1990](https://content.time.com/time/subscriber/article/0,33009,970860,00.html),
+a contemporary report of delivery workers' claims about orders and Washington activity.
+The script attributes the anecdote and explicitly avoids presenting pizza as a reliable
+war predictor, identifying meeting contents, or treating restaurant popularity as a
+record of deliveries to the Pentagon. Other explanations include exercises and ordinary
+overtime. The next chapter establishes computer access boundaries before cache timing.

@@ -1,147 +1,81 @@
-# Android presenter
+# Android presenter — open local connection
 
-A genuinely native Java/Android application. The full Polish script is the main screen;
-a collapsible, scrollable tray holds the three canonical continuations, current detours,
-return, undo, play, step, finish, replay, blanking, and fullscreen output recovery.
-No WebView, browser, cloud account, Google Play Services, or Bluetooth is required. Local-network discovery uses native Android NSD.
-The small platform-widget implementation deliberately replaces the earlier proposed
-Kotlin/Compose foundation; presentation logic remains in Python.
+[Download Android 0.3.0 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.3.0/live-explain-android-0.3.0-preview.apk) · [Releases and checksums](https://github.com/aridlin/live-explain/releases)
 
-## Before the talk
+Native Android 8+ script reader and remote. No QR code, camera permission, pairing token,
+certificate enrollment or account is needed. Any client on a reachable local network can
+read the presenter script and control the desktop. The desktop remains authoritative.
 
-1. Download [Android 0.2.2 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.2.2/live-explain-android-0.2.2-preview.apk) and install it on Android 8 or newer. [Release history and checksums](https://github.com/aridlin/live-explain/releases).
-2. Enable the phone's hotspot and connect the laptop to it. Internet access is unnecessary.
-3. Start the laptop with `./run --remote`. Alternatively open the private presenter
-   with **P**, then **Połącz telefon**. Pair before projecting private UI.
-4. In the private pairing window choose the laptop's Wi-Fi interface/address.
-5. On Android choose **Połączenie → Skanuj kod QR** and scan that window. The app returns to the populated pairing dialog; tap **Połącz** to connect. Pasting the
-   complete private pairing link is an alternative if camera permission is unavailable.
-6. Check **Połączono**, exercise pause/next, open the controls tray, test blank/unblank,
-   and select the HDMI output before leaving the laptop. Keep the phone app in the foreground.
+## Connect
 
-The phone is the primary operating surface during the talk. Next/Pause remain visible;
-the tray provides all routine control and output recovery without opening laptop notes.
-Depth changes and output reassignment have explicit confirmation. Output recovery
-selects a fullscreen audience window, leaves it covered and paused, then lets you choose
-**Pokaż publiczny ekran**. This cannot restart a crashed desktop process or repair an OS/driver hang.
+1. Put the phone and laptop on the same Wi-Fi network, or connect the laptop to the phone hotspot.
+2. Start the updated desktop with `./run`. Its local HTTP server starts automatically on TCP **8080**.
+3. Open the app and select a discovered **Live Explain** presentation.
+4. If discovery is unavailable, enter the laptop's IPv4 address and tap **Połącz z adresem**.
+   An address alone uses port 8080; `http://192.168.0.39:8080` is also accepted.
+   `./run --remote` displays the laptop address. Use that laptop's actual address.
+5. Check **Połączono**, then rehearse Next/Pause, detour/return and blank/unblank before leaving the laptop.
 
-The reader keeps the last synchronized script when disconnected and remembers per-beat
-scroll positions during the activity lifetime. Font size and full-wording/cue preference
-persist. Android keeps the screen awake while this activity is visible. Secure-window
-flags hide it in screenshots and recent-app previews; backups are disabled. Do not cast
-or mirror the phone during a presentation.
+Version 0.3.0 requires the updated desktop: the older TLS/code-pairing server is incompatible.
+The same APK signing key is retained, so install over the existing preview. Old pairing
+credentials are discarded. The app remembers the selected server and reconnects without
+replaying obsolete taps. A failed connection displays its target and a Wi-Fi/firewall hint.
 
-## Local connection
+DNS-SD uses `_liveexplain._tcp`, advertising transport `http`, protocol version `2`, session
+epoch and address/port. First connection requires no secret. Multiple app instances may
+connect; commands are serialized on the desktop GUI thread. When an already-known session
+moves to another IPv4 address, discovery can update the offline connection.
 
-HTTPS on TCP **8765**, with a new certificate and 256-bit bearer token for each desktop
-process. The private QR binds the exact certificate SHA-256 fingerprint and address;
-certificate identity is checked even though there is no public DNS/CA. Pairing credentials
-are private app storage on Android and ephemeral memory on the desktop. No trust-all
-fallback, HTTP downgrade, arbitrary expressions, filesystem API, or shell commands exist.
-Only one paired controller identity may read/control the session. Reinstallation changes
-that identity and requires a fresh desktop pairing session.
+The target laptop's existing UFW configuration permits TCP 8080 and multicast UDP 5353;
+its old presentation port 8765 was not allowed. Other installations must permit the chosen
+port on their local interface. No firewall rule is changed by installing or starting the app.
+Multicast-blocking networks can use the direct IP option; client isolation can block both.
 
-The app polls complete state every 500 ms while foregrounded. Commands send immediately
-when the connection worker is free. This is intentionally simpler than a WebSocket
-channel; the desktop's animation clock does not depend on the polling rate.
+## Live operation
 
-- Every command has host epoch, expected revision, controller identity and a UUID.
-- Only one pending command is permitted, stored before transmission.
-- A duplicate envelope returns its original receipt; changed payloads under the same ID fail.
-- After an uncertain result the phone uses `/resolve`, never sends a new `advance`.
-  An unknown ID is recorded as cancelled, so even late original delivery cannot execute it.
-- Fresh `/state` follows receipt resolution. Old receipt snapshots never replace fresh state.
-- Restarting the phone resolves its saved pending command. No offline tap backlog exists.
-- Reconnection does not overwrite desktop state. A changed desktop process needs a new QR.
-- After an app restart with an unknown old result, explicitly pairing another session
-  requires acknowledging that the old result remains unknown.
+The full Polish wording is the primary reader. Compact cues, font sizing and script scroll
+positions support glancing while speaking. The expandable tray contains three canonical
+continuations, prepared detours, return, undo, play, step, finish, replay, blanking and
+fullscreen output recovery. Next/Pause remain visible. The screen stays awake and private
+from screenshots/recent-app previews. Backup remains disabled.
 
-The desktop advances only to the next authored hold. Loss of the phone connection does
-not advance the narrative; an already-running segment can finish its hold. This is not
-an independent emergency-stop radio. Network timeout detection can take several seconds.
+HTTP is unencrypted and intentionally unauthenticated. Controller UUIDs identify retry
+receipts, not permissions. Commands remain limited to presentation actions; there is no
+Python evaluation, shell, filesystem or arbitrary command endpoint.
 
-Hotspot routing varies by phone vendor. If pairing fails, check the selected laptop IP,
-VPN routing, and whether the laptop firewall allows TCP 8765 on that private interface.
-Do not open the port to the internet. A trusted shared Wi-Fi network is also supported;
-Android DNS-SD discovers `_liveexplain._tcp` sessions on normal local networks. First pairing still requires the private QR; discovery never authorizes access. Already-paired sessions can be relocated to a changed IPv4 address only when their certificate pin matches. Multicast-blocking networks can still use QR/direct connection. Bluetooth remains deferred. Actual hotspot and HDMI rehearsal remain
-required on the physical devices.
+Each command includes host epoch, expected revision and UUID. One pending envelope is
+saved before sending. Uncertain outcomes use `/resolve`; an unknown command is cancelled
+so a delayed original cannot advance later. Receipts are scoped by controller and command
+ID. A fresh authoritative snapshot follows resolution. No offline tap backlog exists.
+Changing servers resolves the old pending envelope against the new epoch instead of
+resubmitting it as a new action. Desktop recovery still starts paused at a safe checkpoint.
 
-## Build and tests
+## Build and validation
 
-Use JDK 17 or 21 and Android SDK platform 35. Set `ANDROID_HOME` to that SDK:
+Use JDK 17/21 and Android SDK 35:
 
 ```sh
-./gradlew assembleDebug testDebugUnitTest
+android/gradlew -p android assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug
+python tools/check_android_apk.py android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The checked-in Gradle wrapper verifies its distribution checksum. Dependency versions
-are pinned; building initially needs Maven/Google repositories. The installed app works
-offline. The preview APK uses the build machine's debug signing key; it is a sideloadable
-rehearsal build, not a Play Store release. CI-built APKs may use another debug key.
+The preview is debug-signed. CI artifacts may use a different signing key; use the published
+release APK to update the previously distributed local preview. The scanner and AndroidX
+Core runtime dependencies were removed with the QR flow.
 
-`CommandLedgerTest` covers process restart, duplicate taps, mismatched acknowledgments,
-new host epochs and uncertain results. Python tests exercise the actual HTTPS transport,
-authentication, GUI-thread dispatch, receipt lookup/cancellation, and scene controls.
-
-For the opt-in Android API 35 emulator rehearsal (host alias 10.0.2.2):
+For the isolated API 35 emulator rehearsal (clears only emulator app preferences):
 
 ```sh
-# From repository root; keep running during the test. Pairing file is PRIVATE.
-.venv/bin/python tools/android_rehearsal_host.py --pairing-file /tmp/live-explain-pairing.txt
-# In another terminal after booting an isolated emulator:
-android/gradlew -p android assembleDebug assembleDebugAndroidTest
+.venv/bin/python tools/android_rehearsal_host.py --server-file /tmp/live-explain-server.txt
+# In another terminal:
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb install -r android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am start -n pl.aridlin.liveexplain/.MainActivity
 adb shell run-as pl.aridlin.liveexplain mkdir -p files
-adb shell 'run-as pl.aridlin.liveexplain sh -c "cat > files/pairing-test.txt"' < /tmp/live-explain-pairing.txt
-adb shell am instrument -w pl.aridlin.liveexplain.test/androidx.test.runner.AndroidJUnitRunner
+adb shell 'run-as pl.aridlin.liveexplain sh -c "cat > files/server-test.txt"' < /tmp/live-explain-server.txt
+adb shell am instrument -w -e class pl.aridlin.liveexplain.PresenterFlowTest pl.aridlin.liveexplain.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-Instrumentation reads the script, advances one segment, enters cache-location, verifies
-exact paused return at position 2, and covers/uncovers the audience. Test-only view captures
-are stored in private app files, bypassing secure-window capture solely from instrumentation.
-The production app contains no screenshot bypass or automatic pairing intent.
-
-Foundations: [Android TLS guidance](https://developer.android.com/privacy-and-security/security-ssl),
-[ZXing Android Embedded](https://github.com/journeyapps/zxing-android-embedded).
-Session QR pinning differs from hard-coded public-service pins: it can be renewed locally
-without shipping an app update. Dependency notices are in `THIRD_PARTY.md`.
-
-### Scanner regression gate
-
-Version 0.2.1 explicitly packages AndroidX Core. ZXing's scanner invokes its camera
-permission helpers, but the scanner dependency alone did not package those classes in
-0.2.0. Instrumentation dependencies can mask that omission. CI now checks **definitions
-in the actual APK DEX files**, including `ContextCompat` and `ActivityCompat`:
-
-```sh
-python tools/check_android_apk.py android/app/build/outputs/apk/debug/app-debug.apk
-# Isolated emulator only: revokes camera permission, opens scanner, grants permission, returns.
-python tools/android_scanner_smoke.py
-```
-
-The standalone API 35 scanner open/permission/Back path passed on 2026-09-08.
-This is separate from decoding a real projected QR on a physical phone.
-
-### Pairing result regression (0.2.2)
-
-Scanning fills the pairing draft and reopens the dialog for one explicit **Połącz**
-step. It no longer connects behind an empty, still-open dialog. Invalid/empty manual
-input stays editable with an inline error; cancelling a scan preserves the draft.
-The draft is included in activity saved state.
-
-`PairingFlowTest` intercepts only the external scanner activity result while exercising
-the real scan button, Android result delivery, restored field and Connect button. It
-also covers empty input, cancelled scans and saved-state contents. It does not pretend
-to test optical QR decoding. Run on an isolated emulator (it clears test app preferences):
-
-```sh
-android/gradlew -p android assembleDebug assembleDebugAndroidTest
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-adb install -r android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb shell am instrument -w -e class pl.aridlin.liveexplain.PairingFlowTest pl.aridlin.liveexplain.test/androidx.test.runner.AndroidJUnitRunner
-```
-
-On 2026-09-09 the native `PairingFlowTest` passed on API 35, alongside the Android
-JVM tests and lint. The release APK retains the prior preview signing identity.
+The test enters the server address through the actual native connection dialog, waits for
+reader synchronization, advances, enters a detour, checks exact paused return, and toggles
+audience blanking. It does not prove physical hotspot routing or projector legibility.

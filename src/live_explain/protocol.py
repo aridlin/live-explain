@@ -1,9 +1,7 @@
-"""Authenticated commands with revision checks and session-lifetime retry receipts."""
+"""LAN commands with revision checks and session-lifetime retry receipts."""
 
 from copy import deepcopy
-import hmac
 import json
-import secrets
 
 
 class CommandHost:
@@ -27,15 +25,12 @@ class CommandHost:
         self.session = session
         self.dispatch = dispatch or session.command
         self.state = state or session.controller_state
-        self.token = secrets.token_urlsafe(32)
         self.receipts = {}
         self.controller = None
 
-    def handle(self, raw, token, controller="phone", resolve=False):
-        if not isinstance(token, str) or not hmac.compare_digest(token, self.token):
-            return {"status": "unauthorized"}
-        if self.controller not in (None, controller):
-            return {"status": "unauthorized"}
+    def handle(self, raw, controller="phone", resolve=False):
+        if not isinstance(controller, str) or not 1 <= len(controller) <= 128:
+            return {"status": "invalid"}
         if not isinstance(raw, str) or len(raw.encode()) > 4096:
             return {"status": "invalid"}
         try:
@@ -81,7 +76,5 @@ class CommandHost:
             self.receipts[key] = (deepcopy(receipt), value)
         return receipt
 
-    def synchronize(self, token):
-        if not isinstance(token, str) or not hmac.compare_digest(token, self.token):
-            raise PermissionError("Unauthorized")
+    def synchronize(self):
         return self.state()

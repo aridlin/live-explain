@@ -27,10 +27,9 @@ def definitions(apk):
 
 REQUIRED = {
     "Lpl/aridlin/liveexplain/MainActivity;",
-    "Lcom/journeyapps/barcodescanner/CaptureActivity;",
-    "Landroidx/core/content/ContextCompat;",
-    "Landroidx/core/app/ActivityCompat;",
-    "Lcom/google/zxing/MultiFormatReader;",
+    "Lpl/aridlin/liveexplain/Connection;",
+    "Lpl/aridlin/liveexplain/Discovery;",
+    "Lpl/aridlin/liveexplain/CommandLedger;",
 }
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -39,4 +38,4 @@ if __name__ == "__main__":
     missing = REQUIRED - definitions(args.apk)
     if missing:
         raise SystemExit("Missing APK runtime classes: " + ", ".join(sorted(missing)))
-    print("Reader, scanner, decoder and camera-permission helpers are defined in the APK.")
+    print("Reader, local connection, discovery and command ledger are defined in the APK.")

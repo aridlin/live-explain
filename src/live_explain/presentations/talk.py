@@ -20,6 +20,7 @@ def initial(beat):
     model.update(
         memory=[(i * 13 + 7) % 256 for i in range(32)],
         public_value=1,
+        pizza_busy=False,
         fault=False,
         allowed=None,
         history=[],
@@ -35,7 +36,9 @@ def initial(beat):
 
 
 def reduce(model, event):
-    if event.kind == "allow":
+    if event.kind == "pizza-orders":
+        model["pizza_busy"] = True
+    elif event.kind == "allow":
         model["allowed"] = True
     elif event.kind == "deny":
         model["allowed"] = False
@@ -90,7 +93,12 @@ REQUIRES = {
     "recap": {"distinction"},
 }
 STAGES = {
-    "opening": ("Postaw pytanie o wynik i ślad.", "Pokaż oficjalną odpowiedź.", "Pokaż osobną obserwację."),
+    "opening": (
+        "Postaw pytanie o Pentagon, bez ujawniania hipotezy.",
+        "Odsłoń zamówienia; poczekaj na odpowiedzi.",
+        "Oddziel obserwację od hipotezy i treści narady.",
+        "Przejdź od pizzy do czasu odczytu pamięci.",
+    ),
     "isolation": (
         "Nazwij dwa rodzaje granic.",
         "Pokaż dozwolony wybór.",
@@ -168,7 +176,7 @@ STAGES = {
 
 
 RETURN_POINTS = {
-    "opening": "odrzucony wynik i obserwowalny ślad to dwie różne rzeczy",
+    "opening": "obserwujemy ślad aktywności, a o jej przyczynie dopiero wnioskujemy",
     "isolation": "reguła funkcji i sprzętowe uprawnienia tworzą różne granice",
     "bytes": "adres 4 wskazuje miejsce, a 7 jest jego zawartością",
     "cache": "cache przechowuje kopie danych używane przez procesor",
@@ -221,7 +229,9 @@ def build():
             covers = set(COVERS[phase])
             requires = set(REQUIRES.get(phase, set()))
             diagram = {"phase": phase, "canonical": canonical}
-            if phase in {"bytes", "timing"}:
+            if phase == "opening":
+                events = (Event(2, "pizza-orders"),)
+            elif phase in {"bytes", "timing"}:
                 composition = (
                     "simple" if canonical == "simple" else "lines" if canonical == "deep" else "timing"
                 )
