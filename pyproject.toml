@@ -7,14 +7,18 @@ name = "live-explain"
 version = "0.2.0"
 description = "A deterministic live explanation instrument"
 requires-python = ">=3.12"
-dependencies = [
+dependencies = []
+
+[project.optional-dependencies]
+native = [
     "PySide6==6.10.2",
     "Pygments==2.19.2",
     "zeroconf==0.148.0",
 ]
 
 [project.scripts]
-live-explain = "live_explain.app:main"
+live-explain = "live_explain.web_server:main"
+live-explain-native = "live_explain.app:main"
 
 [dependency-groups]
 dev = ["pytest==9.0.2", "ruff==0.15.5"]

@@ -33,7 +33,9 @@ wheels = [
 name = "live-explain"
 version = "0.2.0"
 source = { editable = "." }
-dependencies = [
+
+[package.optional-dependencies]
+native = [
     { name = "pygments" },
     { name = "pyside6" },
     { name = "zeroconf" },
@@ -47,10 +49,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "pygments", specifier = "==2.19.2" },
-    { name = "pyside6", specifier = "==6.10.2" },
-    { name = "zeroconf", specifier = "==0.148.0" },
+    { name = "pygments", marker = "extra == 'native'", specifier = "==2.19.2" },
+    { name = "pyside6", marker = "extra == 'native'", specifier = "==6.10.2" },
+    { name = "zeroconf", marker = "extra == 'native'", specifier = "==0.148.0" },
 ]
+provides-extras = ["native"]
 
 [package.metadata.requires-dev]
 dev = [

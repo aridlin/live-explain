@@ -17,14 +17,27 @@ jobs:
       - name: Install locked environment
         run: |
           python -m pip install uv==0.11.3
-          uv sync --frozen
+          uv sync --frozen --extra native
       - name: Lint and test
         run: |
-          uv run ruff check src tests
-          uv run ruff format --check src tests
-          uv run pytest -q
+          uv run --extra native ruff check src tests
+          uv run --extra native ruff format --check src tests
+          uv run --extra native pytest -q
       - name: Build distribution
         run: uv build
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: PYTHONPATH=src python -m unittest discover -s web_tests -v
+      - run: node --test web_tests/scene.test.mjs
 
   android:
     runs-on: ubuntu-latest

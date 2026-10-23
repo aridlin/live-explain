@@ -1,5 +1,14 @@
 # Live Explain
 
+**Browser frontend:** `./run` now opens the web presenter. Open `/` for the synchronized audience view. Requires only Python 3.12+ and a modern browser; Qt is optional. See [the web guide](WEB.md) and [video research](VIDEO_RESEARCH.md).
+
+```sh
+./run
+./run --remote  # phone browser: http://<laptop-IP>:8080/presenter
+```
+
+The three Polish routes, private script, exact detour restoration and prerequisite bridges are retained. The following sections document the retained **native** implementation; use `./run-native` for those commands and install it with `uv sync --frozen --extra native`.
+
 A Python instrument for live technical explanation: three authored canonical narratives, controllable diagrams, explanatory detours, and a synchronized private script.
 
 **Status: complete authored Polish talk and native Android preview; physical room rehearsal remains required.** The fullscreen audience application has been launched and inspected on Hyprland. A native Android script reader and remote now connects locally through the phone hotspot, with direct open HTTP access without pairing codes. See [Android setup](android/README.md).
@@ -13,20 +22,20 @@ A Python instrument for live technical explanation: three authored canonical nar
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). The lockfile pins the tested Python dependencies. No system Python modification is required.
 
 ```sh
-uv sync --frozen
-./run
+uv sync --frozen --extra native
+./run-native
 ```
 
 The audience opens fullscreen. HDMI is preferred when Qt exposes an HDMI-named screen; select another output with `--screen N` (zero-based). Private notes are hidden until explicitly opened. On a single monitor, `P` opens the private presenter window for rehearsal; do not use that on a mirrored public desktop.
 
 ```sh
-./run --windowed --presenter
-./run --canonical deep
-./run --screen 1
-./run --remote  # show the Wi-Fi connection address; server runs on port 8080
+./run-native --windowed --presenter
+./run-native --canonical deep
+./run-native --screen 1
+./run-native --remote  # show the Wi-Fi connection address; server runs on port 8080
 ```
 
-After installation, `./run` uses the installed environment directly and works offline. Bundled DejaVu fonts are checked against a hash manifest and for Polish/technical glyph coverage before audience output opens.
+After installation, `./run-native` uses the installed environment directly and works offline. Bundled DejaVu fonts are checked against a hash manifest and for Polish/technical glyph coverage before audience output opens.
 
 | Key | Action |
 |---|---|
@@ -46,7 +55,7 @@ The presenter window offers the Polish cue and full wording, current objective, 
 
 ## Try the defining interactions
 
-Use `./run --slice` for the compact engineering rehearsal, or `./run --beat normal.timing` within the full talk. The default `./run` starts the complete narrative. See [the presentation and pacing guide](PRESENTATION.md).
+Use `./run-native --slice` for the compact engineering rehearsal, or `./run-native --beat normal.timing` within the full talk. The default `./run-native` starts the complete narrative. See [the presentation and pacing guide](PRESENTATION.md).
 
 1. Start Normal and press Right. Pause halfway through the moving address.
 2. Open the presenter with P; choose **Gdzie jest cache? → Wyjaśnij**.
@@ -59,9 +68,9 @@ Two nested detours are supported; a third is rejected. Repeated Advance during a
 ## Tests and authoring
 
 ```sh
-uv run pytest -q
-uv run ruff check src tests
-uv run ruff format --check src tests
+uv run --extra native pytest -q
+uv run --extra native ruff check src tests
+uv run --extra native ruff format --check src tests
 uv build --offline
 ```
 
@@ -83,13 +92,13 @@ The larger API in [PLAN.md](PLAN.md) remains a proposal. These implemented modul
 ## Capture, rehearsal and recovery
 
 ```sh
-./run --capture artifacts/normal.png --beat normal.timing --position 1.68
-./run --capture artifacts/cache.png --beat shared.location --position 3
-./run --debug --windowed --presenter
-./run --record artifacts/rehearsal.session.json
-./run --replay-file artifacts/rehearsal.session.json
-./run --recover
-./run --export artifacts/fallback --canonical normal
+./run-native --capture artifacts/normal.png --beat normal.timing --position 1.68
+./run-native --capture artifacts/cache.png --beat shared.location --position 3
+./run-native --debug --windowed --presenter
+./run-native --record artifacts/rehearsal.session.json
+./run-native --replay-file artifacts/rehearsal.session.json
+./run-native --recover
+./run-native --export artifacts/fallback --canonical normal
 ```
 
 Capture/export uses the same scene renderer, offline. Export places audience stills in `public/` and notes in a separately named **PRIVATE-presenter-script.txt**. A conventional image viewer can show the stills if the app fails; this is a degraded fallback without live interaction.
@@ -99,9 +108,9 @@ Recovery saves an atomic JSON safe canonical entry under the user's local state 
 ## Performance and limits
 
 ```sh
-uv run python -m live_explain.benchmark --live --slice --frames 180
-uv run python -m live_explain.benchmark --live --frames 240
-./run --benchmark 120
+uv run --extra native python -m live_explain.benchmark --live --slice --frames 180
+uv run --extra native python -m live_explain.benchmark --live --frames 240
+./run-native --benchmark 120
 ```
 
 `--live` briefly opens two real windows and reports paint cost and callback intervals. Without it, the benchmark measures offscreen throughput, not display FPS. The dense fixture includes 30 code lines, 128 bytes, 24 components, 40 connectors and 24 tokens.

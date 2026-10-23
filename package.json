@@ -1,0 +1,6 @@
+{
+  "name": "live-explain-web",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test web_tests/scene.test.mjs", "check": "node --check src/live_explain/web/app.js && node --check src/live_explain/web/scene.js" }
+}
