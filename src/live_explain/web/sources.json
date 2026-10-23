@@ -1,0 +1,5 @@
+[
+  {"creator":"Computerphile","title":"Spectre & Meltdown","url":"https://www.youtube.com/watch?v=I5mRwzVvFGE","views":357907,"likes":10819,"checked":"2026-10-23","lesson":"Od konkretnej granicy tablicy do ujawnienia danych. W prezentacji: indeks, warunek, przejściowy odczyt i osobny pomiar śladu."},
+  {"creator":"Computerphile","title":"CPUs Are Out of Order","url":"https://www.youtube.com/watch?v=_qvOlL8nhN4","views":192041,"likes":4948,"checked":"2026-10-23","lesson":"Najpierw powód optymalizacji: procesor czeka na dane. Dopiero potem przewidywanie i odrzucenie pracy. Rozdzielamy wynik programu od stanu cache."},
+  {"creator":"SciShow","title":"How Meltdown and Spectre Make Your Computer Vulnerable","url":"https://www.youtube.com/watch?v=2exp-NWHp_E","views":246483,"likes":8954,"checked":"2026-10-23","lesson":"Przystępne wejście: zwykła sytuacja, przewidywanie, korzyść i koszt pomyłki. Zachowujemy polski wstęp z pizzą, a potem przechodzimy do dokładnego modelu CPU."}
+]
