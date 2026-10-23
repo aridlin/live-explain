@@ -48,6 +48,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
       - name: Build native app and test command ledger
         run: android/gradlew -p android assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug --console=plain
       - name: Check controller runtime in actual APK
