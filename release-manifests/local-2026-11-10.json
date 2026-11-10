@@ -1,0 +1,17 @@
+{
+  "snapshot": "2026-11-10",
+  "project": "live-explain",
+  "status": "prerelease local-work snapshot",
+  "artifacts": [
+    {
+      "path": "android/app/build/outputs/apk/debug/app-debug.apk",
+      "size": 40382,
+      "sha256": "91987d3469a04f7a91d8e333740caa454112b1d41fdff6f2171e0b6c0f0692af"
+    }
+  ],
+  "checks": [],
+  "notes": [
+    "Android preview/debug APK rebuilt; unit tests and lint pass. Desktop pytest: 82 passed, 1 skipped. APK uses a local debug signing certificate."
+  ],
+  "runtime": "Linux x86_64 dynamic system libraries for ELF binaries; .exe cross-compiled Windows x64; APK preview/debug; OXT platform independent. Source/API compatibility and hardware behavior are not implied by compilation."
+}
