@@ -21,7 +21,7 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private Connection connection;
     private AlertDialog connectionDialog;
-    private EditText addressInput;
+    private EditText addressInput, usernameInput, passwordInput;
     private String addressDraft = "";
     private LinearLayout serverList;
     private String connectionIssue = "";
@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
             if(epoch==null)nearby.remove(info.getServiceName());
             else {
                 nearby.put(info.getServiceName(),info);
-                if(connection!=null && !online && state!=null && epoch.equals(state.optString("epoch"))) {
+                if(connection!=null && !connection.secure && !online && state!=null && epoch.equals(state.optString("epoch"))) {
                     String moved="http://"+info.getHost().getHostAddress()+":"+info.getPort();
                     if(!moved.equals(serverAddress))connect(moved);
                 }
@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
         });
         build();
         if (state != null) render();
-        if (saved == null && connection == null) showConnectionDialog();
+        if (saved == null && (connection == null || connection.secure)) showConnectionDialog();
         if (saved != null) {
             addressDraft = saved.getString("addressDraft", "");
             if (saved.getBoolean("connectionDialogOpen", false)) showConnectionDialog();
@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() { if(connectionDialog!=null)connectionDialog.dismiss(); ui.removeCallbacksAndMessages(null); network.shutdownNow(); super.onDestroy(); }
     public void onBackPressed() {
         if (expanded) toggleTray();
-        else new AlertDialog.Builder(this).setMessage("Opuścić pulpit? Prezentacja pozostanie na laptopie.")
+        else new AlertDialog.Builder(this).setMessage("Opuścić pulpit? Prezentacja pozostanie na serwerze.")
                 .setNegativeButton("Zostań",null).setPositiveButton("Opuść",(d,w)->finish()).show();
     }
     private int dp(float value) { return (int)(getResources().getDisplayMetrics().density * value + .5f); }
@@ -154,11 +154,11 @@ public class MainActivity extends Activity {
     }
     private Button commandButton(String title, String kind, String value, boolean confirm) {
         Button b = button(title,()->{
-            if (confirm) new AlertDialog.Builder(this).setTitle(title).setMessage("Zmienić bieżącą kontynuację?")
+            if (confirm) new AlertDialog.Builder(this).setTitle(title).setMessage(kind.equals("reset")?"Wrócić do początku bieżącej wersji? Postęp i historia cofania zostaną wyzerowane.":"Zmienić bieżącą kontynuację?")
                     .setNegativeButton("Zostań",null).setPositiveButton("Przejdź",(d,w)->send(kind,value)).show();
             else send(kind,value);
         }); b.setTag(kind+":"+(value==null?"":value));
-        icon(b,kind.equals("detour")?"branch":kind.equals("depth")?"text":kind.equals("finish")?"skip":kind.equals("blank")||kind.equals("output")?"screen":kind);
+        icon(b,kind.equals("reset")?"replay":kind.equals("detour")?"branch":kind.equals("depth")?"text":kind.equals("finish")?"skip":kind.equals("blank")||kind.equals("output")?"screen":kind);
         commands.add(b); add(tray,b); return b;
     }
     private void render() {
@@ -210,6 +210,7 @@ public class MainActivity extends Activity {
             commandButton("Pomiń trwający ruch","finish",null,false);
             commandButton("Powtórz bieżący krok","replay",null,false);
             commandButton("Cofnij nawigację","undo",null,false);
+            commandButton("Od początku prezentacji","reset",null,true);
             commandButton(state.optBoolean("blank") ? "Pokaż publiczny ekran" : "Zasłoń publiczny ekran","blank",state.optBoolean("blank") ? "off" : "on",false);
             add(tray,text("CZYTANIE",12,mint));
             add(tray,button(compact ? "Pełne brzmienie" : "Krótkie wskazówki",()->{compact=!compact; prefs.edit().putBoolean("compact",compact).apply();trayKey="";render();}));
@@ -247,7 +248,7 @@ public class MainActivity extends Activity {
             b.setEnabled(allowed);b.setAlpha(allowed || tag.equals("depth:"+state.optString("canonical"))?1:.4f);
         }
         next.setAlpha(next.isEnabled()?1:.45f); pause.setAlpha(pause.isEnabled()?1:.4f);
-        status.setText(connection==null ? "Wybierz prezentację w menu Połączenie" : !ledger.pending().isEmpty() ? "Ustalam wynik polecenia — bez powtórnego przejścia" : online ? "Połączono  ·  "+(receipt.isEmpty()?"laptop steruje sesją":receipt) : (connectionIssue.isEmpty()?"Łączenie z "+serverAddress+"…":connectionIssue+" · próbuję ponownie"));
+        status.setText(connection==null ? "Wybierz prezentację w menu Połączenie" : !ledger.pending().isEmpty() ? "Ustalam wynik polecenia — bez powtórnego przejścia" : online ? "Połączono  ·  "+(receipt.isEmpty()?"serwer steruje sesją":receipt) : (connectionIssue.isEmpty()?"Łączenie z "+serverAddress+"…":connectionIssue+" · próbuję ponownie"));
         status.setTextColor(online?mint:Color.rgb(245,195,125));
     }
     private void send(String kind,String value) {
@@ -273,6 +274,11 @@ public class MainActivity extends Activity {
                     if(finalResponse!=null && ledger.receive(finalResponse)) {
                         prefs.edit().putString("pending",ledger.pending()).commit();
                         receipt=finalResponse.optString("message",finalResponse.optString("status"));
+                        try {
+                            if(finalResponse.optString("status").equals("accepted") && new JSONObject(pending).optString("kind").equals("reset")) {
+                                scrollPositions.clear();shownKey="";reader.scrollTo(0,0);
+                            }
+                        } catch(JSONException ignored) {}
                     }
                     JSONObject fresh=snapshot.optJSONObject("state");
                     if(fresh==null){online=false;connectionIssue="To nie jest zgodna sesja Live Explain";}else{
@@ -281,7 +287,7 @@ public class MainActivity extends Activity {
                     }
                     updateEnabled();
                 });
-            } catch(Exception e){ui.post(()->{if(current==generation && !isDestroyed()){busy=false;online=false;connectionIssue="Laptop nie odpowiada: "+serverAddress+". Sprawdź Wi-Fi i zaporę laptopa.";updateEnabled();}});}
+            } catch(Exception e){ui.post(()->{if(current==generation && !isDestroyed()){busy=false;online=false;connectionIssue=(e.getMessage()!=null && e.getMessage().startsWith("HTTP 401"))?e.getMessage():"Brak połączenia z "+serverAddress+". Sprawdź sieć i adres serwera.";updateEnabled();}});}
         });
     }
     private void refreshServers() {
@@ -296,30 +302,49 @@ public class MainActivity extends Activity {
     private void showConnectionDialog() {
         if(connectionDialog!=null && connectionDialog.isShowing())return;
         LinearLayout box=column();box.setPadding(dp(20),dp(8),dp(20),dp(8));
-        add(box,text("Ta sama sieć Wi-Fi lub hotspot telefonu. Wybierz prezentację — bez kodu i parowania.",16,ink));
+        add(box,text("Przez internet: adres HTTPS oraz login portalu. Lokalnie: ta sama sieć Wi-Fi lub hotspot i adres laptopa.",16,ink));
         serverList=column();add(box,serverList);
         add(box,button("Szukaj ponownie",()->{discovery.stop();discovery.start();refreshServers();}));
-        addressInput=new EditText(this);addressInput.setHint("Adres laptopa, np. 192.168.0.39");
+        addressInput=new EditText(this);addressInput.setHint("https://prol.aridlin.pl/live-explain/");
         addressInput.setTextColor(ink);addressInput.setSingleLine(true);
         addressInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);
         addressInput.setText(addressDraft.isEmpty()?serverAddress:addressDraft);add(box,addressInput);
+        add(box,button("ProLiant — prezentacja rekrutacyjna",()->{
+            addressInput.setText("https://prol.aridlin.pl/live-explain/");
+            usernameInput.setText("aridlin"); passwordInput.requestFocus();
+        }));
+        usernameInput=new EditText(this);usernameInput.setHint("Login portalu (HTTPS)");
+        usernameInput.setTextColor(ink);usernameInput.setSingleLine(true);
+        usernameInput.setText(prefs.getString("portalUser",""));add(box,usernameInput);
+        passwordInput=new EditText(this);passwordInput.setHint("Hasło portalu (HTTPS)");
+        passwordInput.setTextColor(ink);passwordInput.setSingleLine(true);
+        passwordInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        passwordInput.setSaveEnabled(false);
+        passwordInput.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
+        add(box,passwordInput);
+        add(box,text("Hasło pozostaje w pamięci aplikacji do jej zamknięcia. Po ponownym uruchomieniu wpisz je ponownie.",14,ink));
         ScrollView scroll=new ScrollView(this);scroll.addView(box);
-        connectionDialog=new AlertDialog.Builder(this).setTitle("Prezentacje w sieci").setView(scroll)
+        connectionDialog=new AlertDialog.Builder(this).setTitle("Połączenie z prezentacją").setView(scroll)
                 .setNegativeButton("Zamknij",(d,w)->{addressDraft=addressInput.getText().toString();})
                 .setPositiveButton("Połącz z adresem",null).create();
         connectionDialog.show();
         connectionDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            addressDraft=addressInput.getText().toString().trim();connect(addressDraft);
+            addressDraft=addressInput.getText().toString().trim();connect(addressDraft,usernameInput.getText().toString().trim(),passwordInput.getText().toString());
         });
         refreshServers();
     }
-    private void connect(String address) {
+    private void connect(String address) { connect(address,"",""); }
+    private void connect(String address,String username,String password) {
         final Connection candidate;
-        try {candidate=new Connection(address);}
-        catch(Exception invalid) {if(addressInput!=null)addressInput.setError("Wpisz adres IPv4 laptopa, np. 192.168.0.39");return;}
+        try {
+            Connection parsed=new Connection(address);
+            candidate=parsed.secure?new Connection(address,username,password):parsed;
+        }
+        catch(Exception invalid) {if(addressInput!=null)addressInput.setError(invalid.getMessage());return;}
         connection=candidate;serverAddress=candidate.address;addressDraft=serverAddress;
         generation++;busy=false;online=false;receipt="";connectionIssue="";freshPending="";
-        prefs.edit().putString("server",serverAddress).apply();
+        prefs.edit().putString("server",serverAddress).putString("portalUser",candidate.secure?username:"").apply();
+        if(passwordInput!=null)passwordInput.setText("");
         if(connectionDialog!=null)connectionDialog.dismiss();
         updateEnabled();exchange(false);
     }

@@ -69,9 +69,11 @@ def test_fades_restore_at_interrupted_position(app, session):
     assert scene.link1.opacity() == opacity and scene.token.pos() == point
 
 
-def test_remote_dispatch_controls_composition_and_blank(app, tmp_path):
+@pytest.mark.parametrize("presentation", ["spectre", "recruitment"])
+def test_remote_dispatch_controls_composition_and_blank(app, tmp_path, presentation):
     args = SimpleNamespace(
-        slice=True,
+        slice=presentation == "spectre",
+        presentation=presentation,
         canonical="normal",
         beat=None,
         position=0,
@@ -81,11 +83,18 @@ def test_remote_dispatch_controls_composition_and_blank(app, tmp_path):
         replay_file=None,
     )
     instrument = Instrument(app, args)
+    if presentation == "recruitment":
+        assert instrument.recovery.name == "recovery-recruitment.json"
     instrument.timer.stop()
     instrument.recovery = tmp_path / "recovery.json"
     host = CommandHost(instrument.session, instrument.send, instrument.remote_state)
     try:
-        response = host.handle(envelope(instrument.session, "detour", "detour", "cache-location"))
+        detour = "cache-location"
+        if presentation == "recruitment":
+            instrument.session._entry("normal.ft")
+            instrument.scene.refresh()
+            detour = "ft-detail"
+        response = host.handle(envelope(instrument.session, "detour", "detour", detour))
         assert response["status"] == "accepted" and response["state"]["transitioning"]
         assert host.handle(envelope(instrument.session, "pause", "pause"))["status"] == "accepted"
         assert instrument.scene.transition.paused
@@ -101,7 +110,13 @@ def test_remote_dispatch_controls_composition_and_blank(app, tmp_path):
         instrument.presenter.close()
 
 
-def test_http_open_access_resolution_and_gui_ownership(app, session):
+@pytest.mark.parametrize("presentation", ["spectre", "recruitment"])
+def test_http_open_access_resolution_and_gui_ownership(app, session, presentation):
+    if presentation == "recruitment":
+        from live_explain.presentations.recruitment import build
+        from live_explain.runtime import Session
+
+        session = Session(build())
     gui_thread = threading.get_ident()
 
     def dispatch(kind, value):

@@ -1,6 +1,26 @@
-# Android presenter — open local connection
+# Android presenter — HTTPS portal and local connections
 
-[Download Android 0.4.0 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.4.0/live-explain-android-0.4.0-preview.apk) · [Releases and checksums](https://github.com/aridlin/live-explain/releases)
+[Download previous Android 0.4.0 APK](https://github.com/aridlin/live-explain/releases/download/android-v0.4.0/live-explain-android-0.4.0-preview.apk) · [Releases and checksums](https://github.com/aridlin/live-explain/releases)
+
+## Version 0.5.1 (local build)
+
+APK: `artifacts/android/live-explain-android-0.5.1.apk` in the project root.
+**Ścieżki i narzędzia → Od początku prezentacji** resets the current version to its
+first chapter, paused, and clears progress, detours and undo after confirmation.
+The 0.5.1 APK uses the same signing key as the local 0.5.0 APK.
+
+In **Połączenie**, choose **ProLiant — prezentacja rekrutacyjna** or enter
+`https://prol.aridlin.pl/live-explain/`, then enter the existing portal login/password.
+The presenter URL ending in `/presenter/` is accepted too. HTTPS uses Android's normal
+certificate validation and does not follow redirects. Credentials are sent only over
+HTTPS; the password stays in memory and must be entered after restarting the app.
+LAN HTTP remains available with the original IPv4 connection/discovery flow.
+
+This local 0.5.0 APK has a different signing certificate from the GitHub 0.4.0 APK.
+If Android rejects the update, uninstall the old app first (clears its settings/cache,
+not the presentation on the server), then install this APK.
+
+The sections below describe the original LAN mode.
 
 Native Android 8+ script reader and remote. No QR code, camera permission, pairing token,
 certificate enrollment or account is needed. Any client on a reachable local network can
@@ -17,7 +37,7 @@ read the presenter script and control the desktop. The desktop remains authorita
 5. Check **Połączono**, then rehearse Next/Pause, detour/return and blank/unblank before leaving the laptop.
 
 Version 0.3.0 requires the updated desktop: the older TLS/code-pairing server is incompatible.
-The same APK signing key is retained, so install over the existing preview. Old pairing
+The published 0.3/0.4 previews retained their signing key; see the 0.5.0 note above. Old pairing
 credentials are discarded. The app remembers the selected server and reconnects without
 replaying obsolete taps. A failed connection displays its target and a Wi-Fi/firewall hint.
 

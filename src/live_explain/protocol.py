@@ -13,6 +13,7 @@ class CommandHost:
         "step",
         "finish",
         "replay",
+        "reset",
         "return",
         "undo",
         "detour",

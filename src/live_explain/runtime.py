@@ -149,6 +149,15 @@ class Session:
             p.playing = False
             self._changed()
             return True, "Wstrzymano."
+        if kind == "reset":
+            canonical = self.state.narrative.canonical
+            self.state = SessionState(Narrative(canonical, self.presentation.routes[canonical][0]))
+            self.history.clear()
+            self.delivered.clear()
+            self.assessments.clear()
+            self.elapsed = 0.0
+            self._changed()
+            return True, "Początek prezentacji. Odtwarzanie wstrzymane."
         if kind == "seek":
             self.seek(value)
             return True, "Wybrano pozycję; odtwarzanie wstrzymane."

@@ -31,6 +31,22 @@ from .presentations.spectre import build as build_slice
 from .presentations.spectre_scene import SpectreScene
 
 
+def build_presentation(args):
+    if getattr(args, "presentation", "spectre") == "recruitment":
+        from .presentations.recruitment import build as build_recruitment
+
+        return build_recruitment()
+    return build_slice() if getattr(args, "slice", False) else build()
+
+
+def build_scene(session):
+    if session.presentation.id == "igor-recruitment":
+        from .presentations.recruitment_scene import RecruitmentScene
+
+        return RecruitmentScene(session)
+    return SpectreScene(session)
+
+
 class Audience(QGraphicsView):
     def __init__(self, scene):
         super().__init__(scene)
@@ -225,13 +241,18 @@ class Presenter(QMainWindow):
 class Instrument:
     def __init__(self, app, args):
         self.app = app
-        self.session = Session((build_slice() if getattr(args, "slice", False) else build()), args.canonical)
-        self.scene = SpectreScene(self.session)
+        self.session = Session(build_presentation(args), args.canonical)
+        self.scene = build_scene(self.session)
         self.audience = Audience(self.scene)
         self.presenter = Presenter(self.session, self.send, self.audience)
         self.remote = None
         self.connection_dialog = None
-        self.recovery = Path.home() / ".local/state/live-explain/recovery.json"
+        recovery_name = (
+            "recovery-recruitment.json"
+            if self.session.presentation.id == "igor-recruitment"
+            else "recovery.json"
+        )
+        self.recovery = Path.home() / ".local/state/live-explain" / recovery_name
         if args.beat:
             if args.beat not in self.session.presentation.routes[args.canonical]:
                 raise ValueError("Interactive --beat must belong to the selected canonical")
@@ -335,7 +356,7 @@ class Instrument:
                 self.scene.update()
                 self.session._changed()
                 return True, "Zakończono zmianę kompozycji."
-            if kind not in {"undo", "blank", "output", "presenter", "windowed", "fullscreen"}:
+            if kind not in {"undo", "blank", "reset", "output", "presenter", "windowed", "fullscreen"}:
                 self.session.status = "Trwa zmiana kompozycji. Pauza zatrzymuje; F kończy."
                 self.presenter.refresh()
                 return False, self.session.status
@@ -378,6 +399,10 @@ class Instrument:
             self.audience.showNormal()
         else:
             accepted, message = self.session.command(kind, value)
+        if accepted and kind == "reset":
+            self.scene.blank = False
+            self.scene.transition = None
+            self.scene.previous_frame = None
         self.scene.refresh()
         if self.session.beat.id != old_beat and previous_frame is not None:
             self.scene.previous_frame = previous_frame
@@ -418,6 +443,7 @@ def capture(scene, path, width=1600, height=900):
 
 def main():
     parser = argparse.ArgumentParser(description="Live Explain — live presentation instrument")
+    parser.add_argument("--presentation", choices=("spectre", "recruitment"), default="spectre")
     parser.add_argument("--slice", action="store_true", help="Use the compact engineering rehearsal")
     parser.add_argument("--remote", action="store_true", help="Show the local Wi-Fi connection address")
     parser.add_argument("--windowed", action="store_true")
@@ -442,6 +468,8 @@ def main():
         "--benchmark", type=int, metavar="FRAMES", help="Measure offscreen render throughput, not display FPS"
     )
     args = parser.parse_args()
+    if args.slice and args.presentation != "spectre":
+        parser.error("--slice only applies to the spectre presentation")
     if args.capture or args.benchmark or args.export:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     app = QApplication(sys.argv[:1])
@@ -449,13 +477,13 @@ def main():
     app.setDesktopFileName("pl.aridlin.LiveExplain")
     load_fonts()
     if args.capture or args.benchmark or args.export:
-        session = Session((build_slice() if getattr(args, "slice", False) else build()), args.canonical)
+        session = Session(build_presentation(args), args.canonical)
         if args.beat:
             if args.beat not in session.presentation.beats:
                 parser.error("Unknown beat")
             session._entry(args.beat)
         session.seek(args.position)
-        scene = SpectreScene(session)
+        scene = build_scene(session)
         scene.debug = args.debug
         if args.export:
             public = args.export / "public"

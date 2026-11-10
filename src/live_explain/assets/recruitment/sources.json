@@ -1,0 +1,58 @@
+[
+  {
+    "file": "ft-gui.png",
+    "source": "https://github.com/aridlin/ft/blob/fbfaa2aefd0c16ec583bbc08d263412a2e77bca8/docs/screenshots/ftui/showcase-overview.png",
+    "sha256": "ba7525f94cb38c2e433f2de3b932cef2f49831d7ce0d837142c88cb8625b6431"
+  },
+  {
+    "file": "ft-tui.png",
+    "source": "https://github.com/aridlin/ft/blob/fbfaa2aefd0c16ec583bbc08d263412a2e77bca8/docs/screenshots/ftti/showcase-dashboard.png",
+    "sha256": "2ef748dadbae0004a9663d9df440890c2e7cea5a33ef1a2c86279b47084d8e84"
+  },
+  {
+    "file": "ft-web.png",
+    "source": "https://github.com/aridlin/ft/blob/fbfaa2aefd0c16ec583bbc08d263412a2e77bca8/docs/screenshots/ftht/device-panel-controls.png",
+    "sha256": "1267c8fa9424212fb0b61e160320cf8bf7f0a63beaf36791692e8096143a0f85"
+  },
+  {
+    "file": "kalwer-search.png",
+    "source": "https://github.com/aridlin/kalwer/blob/ee562b295663550f4df2ead11d6d88211468a374/screenshots/search.png",
+    "sha256": "a360333a076478e9f1426a2806c3af6ca98c2a1065012b03d62cf6e5b44d5a15"
+  },
+  {
+    "file": "kalwer-calculator.png",
+    "source": "https://github.com/aridlin/kalwer/blob/ee562b295663550f4df2ead11d6d88211468a374/screenshots/calculator.png",
+    "sha256": "889a6ff8115646ad3aa6e68f3b1742a80da8c402fc199f6bdc36f6fafb609e36"
+  },
+  {
+    "file": "voice-builder.png",
+    "source": "https://github.com/aridlin/phonomenal/blob/1a91c24481b555dd08931121a9e60c468cab6ea5/docs/images/web-builder.png",
+    "sha256": "821084ea5b88fec412672d2bdf13c5f233e5b2a0142d6c1952b3b8768cdbec95"
+  },
+  {
+    "file": "voice-editor.png",
+    "source": "https://github.com/aridlin/phonomenal/blob/1a91c24481b555dd08931121a9e60c468cab6ea5/docs/images/web-editor.png",
+    "sha256": "934638b9446a767498c00c684183365446e4e46ce6b2e06a72343a54fa773271"
+  },
+  {
+    "file": "ft-example-gui.png",
+    "source": "https://github.com/aridlin/ft/blob/fbfaa2aefd0c16ec583bbc08d263412a2e77bca8/ft.hpp",
+    "generator": "tools/recruitment_ft_example.cpp",
+    "mode": "gui",
+    "sha256": "04b086a2841b4f5bafd8fee3baded5eaf5bc39d3e2df86ba2e3bf1926ea6a0f2"
+  },
+  {
+    "file": "ft-example-tui.png",
+    "source": "https://github.com/aridlin/ft/blob/fbfaa2aefd0c16ec583bbc08d263412a2e77bca8/ft.hpp",
+    "generator": "tools/recruitment_ft_example.cpp",
+    "mode": "tui",
+    "sha256": "5dd391b5ef93d16cb66caa273d2ff32c03da1605c46d91c399427b7002391878"
+  },
+  {
+    "file": "ft-example-web.png",
+    "source": "https://github.com/aridlin/ft/blob/fbfaa2aefd0c16ec583bbc08d263412a2e77bca8/ft.hpp",
+    "generator": "tools/recruitment_ft_example.cpp",
+    "mode": "web",
+    "sha256": "f2553763a09720239f92aa3e49aa64d96dd6e407234df29169e4463c1495f9a4"
+  }
+]

@@ -1,0 +1,17 @@
+[Unit]
+Description=Live Explain recruitment presentation (authenticated portal upstream)
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+ExecStartPre=-/usr/bin/docker rm -f live-explain-recruitment
+ExecStart=/usr/bin/docker run --rm --name live-explain-recruitment --publish 127.0.0.1:18766:8080 --read-only --tmpfs /tmp:rw,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges --volume /var/lib/live-explain-recruitment:/state:rw live-explain-recruitment:local
+ExecStop=/usr/bin/docker stop -t 10 live-explain-recruitment
+TimeoutStartSec=30
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

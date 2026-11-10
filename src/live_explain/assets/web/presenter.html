@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live Explain — prywatny prezenter</title><link rel="stylesheet" href="../web.css"></head>
+<body class="presenter"><main>
+<header><p>Prywatny tekst i sterowanie</p><h1 id="title">Łączenie z prezentacją…</h1><p id="stage"></p><p id="status" role="status"></p></header>
+<nav class="primary"><button id="next" type="button">Dalej</button><button id="pause" type="button">Pauza</button><button id="finish" type="button">Dokończ</button></nav>
+<article id="script" aria-label="Tekst wypowiedzi"></article>
+<p id="return-context"></p>
+<details><summary>Sterowanie i wersje prezentacji</summary><div class="controls">
+<button id="reset" type="button">Od początku</button>
+<button id="back" type="button">Powrót z dygresji</button><button id="undo" type="button">Cofnij</button><button id="replay" type="button">Powtórz krok</button><button id="blank" type="button">Zasłoń ekran</button>
+<label>Wersja<select id="route"></select></label><button id="change-route" type="button">Przełącz wersję</button>
+<label>Dygresja<select id="branch"></select></label><button id="open-branch" type="button">Otwórz dygresję</button>
+</div></details><footer><a href="../" target="_blank" rel="noopener">Otwórz osobny widok odbiorcy</a><p>Udostępniaj w Meet wyłącznie okno odbiorcy. Ten panel zawiera tekst prywatny.</p></footer>
+</main><script src="../presenter.js"></script></body></html>
